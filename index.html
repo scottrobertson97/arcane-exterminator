@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wave Survivors</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="hud">
+      <div class="hud-block">
+        <div class="hud-label">Wave</div>
+        <div id="wave">1</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">Time</div>
+        <div id="time">0:00</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">HP</div>
+        <div id="hp">100 / 100</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">Level</div>
+        <div id="level">1</div>
+      </div>
+      <div class="hud-block">
+        <div class="hud-label">XP</div>
+        <div id="xp">0 / 20</div>
+      </div>
+    </div>
+
+    <canvas id="game" width="960" height="540"></canvas>
+
+    <div id="instructions">
+      <div class="title">Wave Survivors</div>
+      <div>Move: WASD / Arrow keys</div>
+      <div>Survive waves. Auto-attack fires at nearest enemy.</div>
+      <div>Collect orbs for XP. Level up to pick upgrades.</div>
+      <button id="start">Start</button>
+    </div>
+
+    <div id="levelup" class="hidden">
+      <div class="panel">
+        <div class="title">Level Up</div>
+        <div id="choices"></div>
+      </div>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+</html>

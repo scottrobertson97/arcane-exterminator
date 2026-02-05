@@ -1,0 +1,140 @@
+:root {
+  --ink: #0b0c0f;
+  --bg: #f3efe7;
+  --accent: #d94f2b;
+  --accent-2: #1f6f8b;
+  --panel: #fff8e8;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: "IBM Plex Mono", "Space Grotesk", ui-monospace, SFMono-Regular, Menlo,
+    Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at 20% 10%, #fff3d6 0%, var(--bg) 55%, #e9e3d3 100%);
+  color: var(--ink);
+  height: 100vh;
+  display: block;
+  overflow: hidden;
+}
+
+#hud {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  z-index: 3;
+}
+
+.hud-block {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.hud-label {
+  font-weight: 700;
+}
+
+#game {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+#instructions,
+#levelup {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(11, 12, 15, 0.65);
+  color: #fff;
+  z-index: 5;
+}
+
+#instructions .title,
+#levelup .title {
+  font-size: 28px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+#instructions {
+  text-align: center;
+  gap: 8px;
+  padding: 24px;
+}
+
+#instructions button {
+  margin-top: 12px;
+  padding: 10px 18px;
+  border: 2px solid #fff;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+#levelup.hidden {
+  display: none;
+}
+
+#levelup .panel {
+  background: #111;
+  border: 2px solid #fff;
+  padding: 24px;
+  min-width: min(90vw, 520px);
+}
+
+#choices {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.choice-btn {
+  padding: 10px 14px;
+  border: 2px solid #fff;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: grid;
+  gap: 4px;
+}
+
+.choice-btn span {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+@media (max-width: 700px) {
+  #hud {
+    font-size: 10px;
+  }
+
+  #game {
+    width: 100vw;
+    height: 100vh;
+  }
+}
