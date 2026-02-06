@@ -1254,10 +1254,20 @@ function draw() {
 
   for (const relic of relics) {
     const pulse = 0.6 + 0.4 * Math.sin(relic.wobble)
+    ctx.fillStyle = 'rgba(40, 40, 40, 0.25)'
+    ctx.beginPath()
+    ctx.ellipse(
+      relic.x - cam.x,
+      relic.y - cam.y + relic.r + 2,
+      relic.r * 1.05,
+      relic.r * 0.45,
+      0,
+      0,
+      Math.PI * 2,
+    )
+    ctx.fill()
     if (relicSprite.complete && relicSprite.naturalWidth > 0) {
       const size = relic.r * 2
-      ctx.save()
-      ctx.globalAlpha = pulse
       ctx.drawImage(
         relicSprite,
         relic.x - cam.x - size / 2,
@@ -1265,7 +1275,6 @@ function draw() {
         size,
         size,
       )
-      ctx.restore()
     } else {
       ctx.fillStyle = `rgba(80, 170, 255, ${pulse})`
       ctx.beginPath()
@@ -1317,6 +1326,18 @@ function draw() {
 
   for (const enemy of enemies) {
     const sprite = enemy.tier === 2 ? enemyBigSprite : enemySmallSprite
+    ctx.fillStyle = 'rgba(40, 40, 40, 0.28)'
+    ctx.beginPath()
+    ctx.ellipse(
+      enemy.x - cam.x,
+      enemy.y - cam.y + enemy.r + 2,
+      enemy.r * 1.05,
+      enemy.r * 0.45,
+      0,
+      0,
+      Math.PI * 2,
+    )
+    ctx.fill()
     if (enemy.shockTimer > 0) {
       const pulse = 0.4 + 0.4 * Math.sin((enemy.shockTimer * 8) % (Math.PI * 2))
       ctx.fillStyle = `rgba(80, 170, 255, ${pulse})`
@@ -1350,6 +1371,18 @@ function draw() {
 
   if (playerSprite.complete && playerSprite.naturalWidth > 0) {
     const size = player.r * 2
+    ctx.fillStyle = 'rgba(40, 40, 40, 0.32)'
+    ctx.beginPath()
+    ctx.ellipse(
+      player.x - cam.x,
+      player.y - cam.y + player.r + 2,
+      player.r * 1.1,
+      player.r * 0.5,
+      0,
+      0,
+      Math.PI * 2,
+    )
+    ctx.fill()
     ctx.drawImage(
       playerSprite,
       player.x - cam.x - size / 2,
@@ -1358,6 +1391,18 @@ function draw() {
       size,
     )
   } else {
+    ctx.fillStyle = 'rgba(40, 40, 40, 0.32)'
+    ctx.beginPath()
+    ctx.ellipse(
+      player.x - cam.x,
+      player.y - cam.y + player.r + 2,
+      player.r * 1.1,
+      player.r * 0.5,
+      0,
+      0,
+      Math.PI * 2,
+    )
+    ctx.fill()
     ctx.fillStyle = '#0b0c0f'
     ctx.beginPath()
     ctx.arc(player.x - cam.x, player.y - cam.y, player.r, 0, Math.PI * 2)
