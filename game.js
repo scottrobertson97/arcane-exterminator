@@ -13,9 +13,17 @@ const instructions = document.getElementById('instructions')
 const startBtn = document.getElementById('start')
 const levelup = document.getElementById('levelup')
 const choicesEl = document.getElementById('choices')
+const zoomControls = {
+  out: document.getElementById('zoom-out'),
+  in: document.getElementById('zoom-in'),
+  label: document.getElementById('zoom-label'),
+}
 
-let VIEW_WIDTH = canvas.width
-let VIEW_HEIGHT = canvas.height
+const zoomLevels = [1, 2, 4]
+let zoomIndex = 1
+let zoom = zoomLevels[zoomIndex]
+let VIEW_WIDTH = canvas.width / zoom
+let VIEW_HEIGHT = canvas.height / zoom
 const WORLD_WIDTH = 2400
 const WORLD_HEIGHT = 1600
 
@@ -58,6 +66,11 @@ const player = {
   pulseDamage: 28,
   pulseKnockback: 320,
   pulseUnlocked: false,
+  novaCooldown: 2.6,
+  novaRadius: 70,
+  novaDamage: 14,
+  novaKnockback: 220,
+  novaUnlocked: false,
   bladeCount: 2,
   bladeRadius: 34,
   bladeSpeed: 2.4,
@@ -66,6 +79,24 @@ const player = {
   bladeSize: 22,
   bladeAngle: 0,
   bladesUnlocked: false,
+  frostFireRate: 0.9,
+  frostDamage: 10,
+  frostSpeed: 360,
+  frostPierce: 2,
+  frostShots: 2,
+  frostUnlocked: false,
+  chainCooldown: 1.6,
+  chainDamage: 12,
+  chainRange: 120,
+  chainCount: 2,
+  chainUnlocked: false,
+  orbCount: 1,
+  orbRadius: 60,
+  orbSpeed: 1.2,
+  orbDamage: 8,
+  orbHitCooldown: 0.6,
+  orbAngle: 0,
+  orbUnlocked: false,
   upgrades: {},
 }
 
@@ -77,6 +108,8 @@ const healthPacks = []
 const pulses = []
 const particles = []
 const bladePositions = []
+const solarPositions = []
+const chainArcs = []
 const ENEMY_SEP_RADIUS = 42
 const ENEMY_SEP_FORCE = 120
 const playerSprite = new Image()
@@ -100,8 +133,22 @@ function resizeCanvas() {
   const height = Math.max(240, Math.floor(window.innerHeight))
   canvas.width = width
   canvas.height = height
-  VIEW_WIDTH = width
-  VIEW_HEIGHT = height
+  applyZoom()
+}
+
+function applyZoom() {
+  zoom = zoomLevels[zoomIndex]
+  VIEW_WIDTH = canvas.width / zoom
+  VIEW_HEIGHT = canvas.height / zoom
+  if (zoomControls.label) zoomControls.label.textContent = `${zoom}X`
+  if (zoomControls.out) zoomControls.out.disabled = zoomIndex === 0
+  if (zoomControls.in)
+    zoomControls.in.disabled = zoomIndex === zoomLevels.length - 1
+}
+
+function setZoomIndex(nextIndex) {
+  zoomIndex = Math.max(0, Math.min(zoomLevels.length - 1, nextIndex))
+  applyZoom()
 }
 
 const upgradeDefs = [
@@ -151,6 +198,90 @@ const upgradeDefs = [
       } else if (lvl === 4) {
         player.bladeSpeed += 0.4
       }
+    },
+  },
+  {
+    id: 'frost',
+    max: 5,
+    name: 'Frost Shards',
+    desc: lvl =>
+      lvl === 0
+        ? 'Unlocks frost shards'
+        : lvl === 1
+          ? '+1 shard per burst'
+          : lvl === 2
+            ? '+2 damage'
+            : lvl === 3
+              ? '+1 pierce'
+              : '+0.3 fire rate',
+    canShow: () => true,
+    apply: lvl => {
+      if (lvl === 1) player.frostUnlocked = true
+      if (lvl === 2) player.frostShots += 1
+      if (lvl === 3) player.frostDamage += 2
+      if (lvl === 4) player.frostPierce += 1
+      if (lvl === 5) player.frostFireRate = +(player.frostFireRate + 0.3).toFixed(2)
+    },
+  },
+  {
+    id: 'nova',
+    max: 4,
+    name: 'Arcane Nova',
+    desc: lvl =>
+      lvl === 0
+        ? 'Unlocks arcane nova'
+        : lvl === 1
+          ? '-15% cooldown'
+          : lvl === 2
+            ? '+15 radius'
+            : '+6 damage',
+    canShow: () => true,
+    apply: lvl => {
+      if (lvl === 1) player.novaUnlocked = true
+      if (lvl === 2)
+        player.novaCooldown = +(player.novaCooldown * 0.85).toFixed(2)
+      if (lvl === 3) player.novaRadius += 15
+      if (lvl === 4) player.novaDamage += 6
+    },
+  },
+  {
+    id: 'chain',
+    max: 4,
+    name: 'Chain Lightning',
+    desc: lvl =>
+      lvl === 0
+        ? 'Unlocks chain lightning'
+        : lvl === 1
+          ? '+1 chain'
+          : lvl === 2
+            ? '+4 damage'
+            : '+25 range',
+    canShow: () => true,
+    apply: lvl => {
+      if (lvl === 1) player.chainUnlocked = true
+      if (lvl === 2) player.chainCount += 1
+      if (lvl === 3) player.chainDamage += 4
+      if (lvl === 4) player.chainRange += 25
+    },
+  },
+  {
+    id: 'solar',
+    max: 4,
+    name: 'Solar Orbs',
+    desc: lvl =>
+      lvl === 0
+        ? 'Unlocks solar orbs'
+        : lvl === 1
+          ? '+1 orb'
+          : lvl === 2
+            ? '+2 damage'
+            : '+0.4 orbit speed',
+    canShow: () => true,
+    apply: lvl => {
+      if (lvl === 1) player.orbUnlocked = true
+      if (lvl === 2) player.orbCount += 1
+      if (lvl === 3) player.orbDamage += 2
+      if (lvl === 4) player.orbSpeed += 0.4
     },
   },
   {
@@ -229,9 +360,15 @@ const statUpgrades = [
 let shootTimer = 0
 let spawnTimer = 0
 let pulseTimer = 0
+let novaTimer = 0
+let frostTimer = 0
+let chainTimer = 0
 let relicTimer = 0
 
 function resetGame() {
+  zoomIndex = 1
+  applyZoom()
+
   player.x = WORLD_WIDTH / 2
   player.y = WORLD_HEIGHT / 2
   player.hp = player.maxHp
@@ -248,6 +385,11 @@ function resetGame() {
   player.pulseDamage = 28
   player.pulseKnockback = 320
   player.pulseUnlocked = false
+  player.novaCooldown = 2.6
+  player.novaRadius = 70
+  player.novaDamage = 14
+  player.novaKnockback = 220
+  player.novaUnlocked = false
   player.bladesUnlocked = false
   player.bladeCount = 2
   player.bladeRadius = 34
@@ -256,6 +398,24 @@ function resetGame() {
   player.bladeHitCooldown = 0.35
   player.bladeSize = 22
   player.bladeAngle = 0
+  player.frostFireRate = 0.9
+  player.frostDamage = 10
+  player.frostSpeed = 360
+  player.frostPierce = 2
+  player.frostShots = 2
+  player.frostUnlocked = false
+  player.chainCooldown = 1.6
+  player.chainDamage = 12
+  player.chainRange = 120
+  player.chainCount = 2
+  player.chainUnlocked = false
+  player.orbCount = 1
+  player.orbRadius = 60
+  player.orbSpeed = 1.2
+  player.orbDamage = 8
+  player.orbHitCooldown = 0.6
+  player.orbAngle = 0
+  player.orbUnlocked = false
   player.upgrades = { bullets: 1 }
 
   bullets.length = 0
@@ -265,6 +425,8 @@ function resetGame() {
   healthPacks.length = 0
   pulses.length = 0
   particles.length = 0
+  solarPositions.length = 0
+  chainArcs.length = 0
 
   state.elapsed = 0
   state.pendingLevels = 0
@@ -272,6 +434,9 @@ function resetGame() {
   shootTimer = 0
   spawnTimer = 0
   pulseTimer = 0
+  novaTimer = 0
+  frostTimer = 0
+  chainTimer = 0
   relicTimer = 6
 }
 
@@ -291,7 +456,15 @@ function updateHud() {
 }
 
 function addOrb(x, y, value) {
-  orbs.push({ x, y, r: 6, value, drift: Math.random() * Math.PI * 2 })
+  orbs.push({
+    x,
+    y,
+    baseY: y,
+    bob: 0,
+    r: 6,
+    value,
+    drift: Math.random() * Math.PI * 2,
+  })
 }
 
 function addRelic() {
@@ -348,22 +521,23 @@ function spawnEnemy() {
   const tier = Math.random() < Math.min(0.15 + wave * 0.01, 0.4) ? 2 : 1
   const baseHp = tier === 2 ? 70 : 40
   const baseSpeed = tier === 2 ? 70 : 90
-  const enemy = {
-    x,
-    y,
-    r: tier === 2 ? 16 : 12,
-    hp: Math.round(baseHp + wave * 8),
-    maxHp: Math.round(baseHp + wave * 8),
+    const enemy = {
+      x,
+      y,
+      r: tier === 2 ? 16 : 12,
+      hp: Math.round(baseHp + wave * 8),
+      maxHp: Math.round(baseHp + wave * 8),
     speed: baseSpeed + wave * 4,
     damage: tier === 2 ? 18 : 12,
     tier,
     vx: 0,
     vy: 0,
     knockX: 0,
-    knockY: 0,
-    shockTimer: 0,
-    bladeHitTimer: 0,
-  }
+      knockY: 0,
+      shockTimer: 0,
+      bladeHitTimer: 0,
+      orbHitTimer: 0,
+    }
   enemies.push(enemy)
 }
 
@@ -402,9 +576,41 @@ function shoot(dt) {
     r: 4,
     damage: player.damage,
     life: 1.5,
+    type: 'fire',
   })
 
   shootTimer = 1 / player.fireRate
+}
+
+function fireFrostShards(dt) {
+  frostTimer -= dt
+  if (frostTimer > 0) return
+  const target = nearestEnemy()
+  if (!target) return
+
+  const dx = target.x - player.x
+  const dy = target.y - player.y
+  const baseAngle = Math.atan2(dy, dx)
+  const spread = 0.18
+  const count = Math.max(1, player.frostShots)
+  const start = -((count - 1) * spread) / 2
+
+  for (let i = 0; i < count; i += 1) {
+    const angle = baseAngle + start + i * spread
+    bullets.push({
+      x: player.x,
+      y: player.y,
+      vx: Math.cos(angle) * player.frostSpeed,
+      vy: Math.sin(angle) * player.frostSpeed,
+      r: 4,
+      damage: player.frostDamage,
+      life: 1.4,
+      type: 'frost',
+      pierce: player.frostPierce,
+    })
+  }
+
+  frostTimer = 1 / player.frostFireRate
 }
 
 function pulseShockwave() {
@@ -414,6 +620,8 @@ function pulseShockwave() {
     r: 0,
     max: player.pulseRadius,
     life: 0.45,
+    maxLife: 0.45,
+    type: 'pulse',
   })
   for (const enemy of enemies) {
     const dx = enemy.x - player.x
@@ -427,6 +635,69 @@ function pulseShockwave() {
       enemy.knockX += (dx / dist) * knock
       enemy.knockY += (dy / dist) * knock
     }
+  }
+}
+
+function novaShockwave() {
+  pulses.push({
+    x: player.x,
+    y: player.y,
+    r: 0,
+    max: player.novaRadius,
+    life: 0.35,
+    maxLife: 0.35,
+    type: 'nova',
+  })
+  for (const enemy of enemies) {
+    const dx = enemy.x - player.x
+    const dy = enemy.y - player.y
+    const dist = Math.hypot(dx, dy) || 1
+    if (dist <= player.novaRadius) {
+      enemy.hp -= player.novaDamage
+      enemy.shockTimer = 0.6
+      const falloff = 1 - dist / player.novaRadius
+      const knock = player.novaKnockback * Math.max(0.2, falloff)
+      enemy.knockX += (dx / dist) * knock
+      enemy.knockY += (dy / dist) * knock
+    }
+  }
+}
+
+function chainLightning() {
+  if (enemies.length === 0) return
+  const hit = []
+  let current = nearestEnemy()
+  if (!current) return
+  chainArcs.push({
+    x1: player.x,
+    y1: player.y,
+    x2: current.x,
+    y2: current.y,
+    life: 0.2,
+  })
+  for (let i = 0; i < player.chainCount + 1; i += 1) {
+    if (!current) break
+    current.hp -= player.chainDamage
+    current.shockTimer = Math.max(current.shockTimer, 0.8)
+    hit.push(current)
+    const next = enemies
+      .filter(enemy => !hit.includes(enemy))
+      .map(enemy => ({
+        enemy,
+        dist: Math.hypot(enemy.x - current.x, enemy.y - current.y),
+      }))
+      .filter(entry => entry.dist <= player.chainRange)
+      .sort((a, b) => a.dist - b.dist)[0]
+    if (next) {
+      chainArcs.push({
+        x1: current.x,
+        y1: current.y,
+        x2: next.enemy.x,
+        y2: next.enemy.y,
+        life: 0.2,
+      })
+    }
+    current = next ? next.enemy : null
   }
 }
 
@@ -584,13 +855,43 @@ function update(dt) {
     }
   }
 
+  player.orbAngle += player.orbSpeed * dt
+  solarPositions.length = 0
+  if (player.orbUnlocked && player.orbCount > 0) {
+    const step = (Math.PI * 2) / player.orbCount
+    for (let i = 0; i < player.orbCount; i += 1) {
+      const angle = player.orbAngle + step * i
+      solarPositions.push({
+        x: player.x + Math.cos(angle) * player.orbRadius,
+        y: player.y + Math.sin(angle) * player.orbRadius,
+      })
+    }
+  }
+
   shoot(dt)
+  if (player.frostUnlocked) fireFrostShards(dt)
 
   if (player.pulseUnlocked) {
     pulseTimer -= dt
     if (pulseTimer <= 0) {
       pulseShockwave()
       pulseTimer = player.pulseCooldown
+    }
+  }
+
+  if (player.novaUnlocked) {
+    novaTimer -= dt
+    if (novaTimer <= 0) {
+      novaShockwave()
+      novaTimer = player.novaCooldown
+    }
+  }
+
+  if (player.chainUnlocked) {
+    chainTimer -= dt
+    if (chainTimer <= 0) {
+      chainLightning()
+      chainTimer = player.chainCooldown
     }
   }
 
@@ -624,6 +925,7 @@ function update(dt) {
 
     if (enemy.shockTimer > 0) enemy.shockTimer -= dt
     if (enemy.bladeHitTimer > 0) enemy.bladeHitTimer -= dt
+    if (enemy.orbHitTimer > 0) enemy.orbHitTimer -= dt
     const slow = enemy.shockTimer > 0 ? 0.55 : 1
     const seekVX = (dx / dist) * enemy.speed * slow
     const seekVY = (dy / dist) * enemy.speed * slow
@@ -652,6 +954,18 @@ function update(dt) {
         if (Math.hypot(bx, by) < enemy.r + player.bladeSize * 0.5) {
           enemy.hp -= player.bladeDamage
           enemy.bladeHitTimer = player.bladeHitCooldown
+          break
+        }
+      }
+    }
+
+    if (enemy.orbHitTimer <= 0) {
+      for (const orb of solarPositions) {
+        const ox = orb.x - enemy.x
+        const oy = orb.y - enemy.y
+        if (Math.hypot(ox, oy) < enemy.r + 8) {
+          enemy.hp -= player.orbDamage
+          enemy.orbHitTimer = player.orbHitCooldown
           break
         }
       }
@@ -699,7 +1013,7 @@ function update(dt) {
       vy: (Math.random() - 0.5) * 40,
       r: 3 + Math.random() * 2,
       life: 0.35,
-      color: 'fire',
+      color: bullet.type === 'frost' ? 'ice' : 'fire',
     })
 
     let hit = false
@@ -709,6 +1023,12 @@ function update(dt) {
       if (Math.hypot(dx, dy) < enemy.r + bullet.r) {
         enemy.hp -= bullet.damage
         hit = true
+        if (bullet.type === 'frost') {
+          bullet.pierce -= 1
+          if (bullet.pierce > 0) {
+            hit = false
+          }
+        }
         break
       }
     }
@@ -762,7 +1082,8 @@ function update(dt) {
   for (let i = orbs.length - 1; i >= 0; i -= 1) {
     const orb = orbs[i]
     orb.drift += dt * 2
-    orb.y += Math.sin(orb.drift) * 10 * dt
+    orb.bob = Math.sin(orb.drift) * 10
+    orb.y = orb.baseY + orb.bob
 
     const dx = player.x - orb.x
     const dy = player.y - orb.y
@@ -776,16 +1097,23 @@ function update(dt) {
     ) {
       const pull = (1 - dist / (player.pickupRadius * 3)) * 160
       orb.x += (dx / dist) * pull * dt
-      orb.y += (dy / dist) * pull * dt
+      orb.baseY += (dy / dist) * pull * dt
+      orb.y = orb.baseY + orb.bob
     }
   }
 
   for (let i = pulses.length - 1; i >= 0; i -= 1) {
     const pulse = pulses[i]
     pulse.life -= dt
-    const t = 1 - pulse.life / 0.45
+    const t = 1 - pulse.life / pulse.maxLife
     pulse.r = pulse.max * Math.min(1, t)
     if (pulse.life <= 0) pulses.splice(i, 1)
+  }
+
+  for (let i = chainArcs.length - 1; i >= 0; i -= 1) {
+    const arc = chainArcs[i]
+    arc.life -= dt
+    if (arc.life <= 0) chainArcs.splice(i, 1)
   }
 
   if (player.hp <= 0) {
@@ -799,9 +1127,12 @@ function update(dt) {
 }
 
 function draw() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
   ctx.imageSmoothingEnabled = false
+  ctx.save()
+  ctx.scale(zoom, zoom)
   const cam = camera()
-  ctx.clearRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
 
   ctx.fillStyle = '#efe7d6'
   ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
@@ -825,6 +1156,22 @@ function draw() {
   }
 
   for (const orb of orbs) {
+    const height = (orb.bob + 10) / 20
+    const shadowScale = 0.8 + (1 - height) * 0.6
+    const shadowAlpha = 0.5 * height + 0.12
+    ctx.fillStyle = `rgba(40, 40, 40, ${shadowAlpha.toFixed(3)})`
+    ctx.beginPath()
+    ctx.ellipse(
+      orb.x - cam.x,
+      orb.baseY - cam.y + orb.r + 10,
+      orb.r * 1.1 * shadowScale,
+      orb.r * 0.55 * shadowScale,
+      0,
+      0,
+      Math.PI * 2,
+    )
+    ctx.fill()
+
     ctx.fillStyle = '#1f6f8b'
     ctx.beginPath()
     ctx.arc(orb.x - cam.x, orb.y - cam.y, orb.r, 0, Math.PI * 2)
@@ -833,10 +1180,24 @@ function draw() {
 
   for (const pulse of pulses) {
     const alpha = 0.35 + 0.35 * Math.sin((pulse.r / pulse.max) * Math.PI * 4)
-    ctx.strokeStyle = `rgba(80, 170, 255, ${alpha})`
-    ctx.lineWidth = 4
+    const color =
+      pulse.type === 'nova'
+        ? `rgba(190, 120, 255, ${alpha})`
+        : `rgba(80, 170, 255, ${alpha})`
+    ctx.strokeStyle = color
+    ctx.lineWidth = pulse.type === 'nova' ? 3 : 4
     ctx.beginPath()
     ctx.arc(pulse.x - cam.x, pulse.y - cam.y, pulse.r, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+
+  for (const arc of chainArcs) {
+    const alpha = Math.min(1, arc.life / 0.2)
+    ctx.strokeStyle = `rgba(120, 200, 255, ${alpha})`
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(arc.x1 - cam.x, arc.y1 - cam.y)
+    ctx.lineTo(arc.x2 - cam.x, arc.y2 - cam.y)
     ctx.stroke()
   }
 
@@ -857,8 +1218,20 @@ function draw() {
     }
   }
 
+  for (const orb of solarPositions) {
+    ctx.fillStyle = 'rgba(255, 210, 120, 0.95)'
+    ctx.beginPath()
+    ctx.arc(orb.x - cam.x, orb.y - cam.y, 6, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(255, 240, 200, 0.7)'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(orb.x - cam.x, orb.y - cam.y, 9, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+
   for (const bullet of bullets) {
-    ctx.fillStyle = '#ff7b3a'
+    ctx.fillStyle = bullet.type === 'frost' ? '#7cc7ff' : '#ff7b3a'
     ctx.beginPath()
     ctx.arc(bullet.x - cam.x, bullet.y - cam.y, bullet.r, 0, Math.PI * 2)
     ctx.fill()
@@ -869,6 +1242,8 @@ function draw() {
     const alpha = Math.max(0, Math.min(1, p.life / maxLife))
     if (p.color === 'blood') {
       ctx.fillStyle = `rgba(180, 30, 30, ${alpha})`
+    } else if (p.color === 'ice') {
+      ctx.fillStyle = `rgba(120, 200, 255, ${alpha})`
     } else {
       ctx.fillStyle = `rgba(255, 180, 90, ${alpha})`
     }
@@ -989,11 +1364,25 @@ function draw() {
     ctx.fill()
   }
 
+  ctx.strokeStyle = '#d94f2b'
+  ctx.lineWidth = 3
+  const hpRatio = Math.max(0, player.hp / player.maxHp)
+  ctx.beginPath()
+  ctx.arc(
+    player.x - cam.x,
+    player.y - cam.y,
+    player.r + 6,
+    -Math.PI / 2,
+    -Math.PI / 2 + Math.PI * 2 * hpRatio,
+  )
+  ctx.stroke()
+  ctx.restore()
+
   // Minimap
   const mapPadding = 16
   const mapWidth = 180
   const mapHeight = Math.round((WORLD_HEIGHT / WORLD_WIDTH) * mapWidth)
-  const mapX = VIEW_WIDTH - mapWidth - mapPadding
+  const mapX = canvas.width - mapWidth - mapPadding
   const mapY = mapPadding
   const scaleX = mapWidth / WORLD_WIDTH
   const scaleY = mapHeight / WORLD_HEIGHT
@@ -1028,19 +1417,6 @@ function draw() {
   )
   ctx.fill()
   ctx.restore()
-
-  ctx.strokeStyle = '#d94f2b'
-  ctx.lineWidth = 3
-  const hpRatio = Math.max(0, player.hp / player.maxHp)
-  ctx.beginPath()
-  ctx.arc(
-    player.x - cam.x,
-    player.y - cam.y,
-    player.r + 6,
-    -Math.PI / 2,
-    -Math.PI / 2 + Math.PI * 2 * hpRatio,
-  )
-  ctx.stroke()
 }
 
 function loop(timestamp) {
@@ -1088,6 +1464,10 @@ window.addEventListener('keyup', event => {
 })
 
 startBtn.addEventListener('click', startGame)
+if (zoomControls.out)
+  zoomControls.out.addEventListener('click', () => setZoomIndex(zoomIndex - 1))
+if (zoomControls.in)
+  zoomControls.in.addEventListener('click', () => setZoomIndex(zoomIndex + 1))
 
 window.addEventListener('resize', resizeCanvas)
 resizeCanvas()
@@ -1097,8 +1477,8 @@ function updateMouseTarget(event) {
   const scaleX = canvas.width / rect.width
   const scaleY = canvas.height / rect.height
   const cam = camera()
-  input.mouseX = cam.x + (event.clientX - rect.left) * scaleX
-  input.mouseY = cam.y + (event.clientY - rect.top) * scaleY
+  input.mouseX = cam.x + ((event.clientX - rect.left) * scaleX) / zoom
+  input.mouseY = cam.y + ((event.clientY - rect.top) * scaleY) / zoom
 }
 
 canvas.addEventListener('mousedown', event => {

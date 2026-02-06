@@ -55,6 +55,46 @@ body {
   touch-action: none;
 }
 
+#zoom-controls {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  grid-auto-flow: column;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  z-index: 3;
+}
+
+#zoom-controls button {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+}
+
+#zoom-controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#zoom-label {
+  min-width: 36px;
+  text-align: center;
+  font-weight: 700;
+}
+
 #instructions,
 #levelup {
   position: fixed;
