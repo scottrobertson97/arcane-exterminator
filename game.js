@@ -1,3 +1,4 @@
+// DOM and canvas handles
 const canvas = document.getElementById('game')
 const ctx = canvas.getContext('2d')
 
@@ -19,6 +20,7 @@ const zoomControls = {
   label: document.getElementById('zoom-label'),
 }
 
+// Constants and world config
 const zoomLevels = [1, 2, 4]
 let zoomIndex = 1
 let zoom = zoomLevels[zoomIndex]
@@ -27,6 +29,7 @@ let VIEW_HEIGHT = canvas.height / zoom
 const WORLD_WIDTH = 2400
 const WORLD_HEIGHT = 1600
 
+// Mutable runtime state
 const state = {
   running: false,
   paused: false,
@@ -100,16 +103,32 @@ const player = {
   upgrades: {},
 }
 
-const bullets = []
-const enemies = []
-const orbs = []
-const relics = []
-const healthPacks = []
-const pulses = []
-const particles = []
-const bladePositions = []
-const solarPositions = []
-const chainArcs = []
+const entities = {
+  bullets: [],
+  enemies: [],
+  orbs: [],
+  relics: [],
+  healthPacks: [],
+  pulses: [],
+  particles: [],
+  chainArcs: [],
+}
+
+const orbitCache = {
+  blades: [],
+  solars: [],
+}
+
+const bullets = entities.bullets
+const enemies = entities.enemies
+const orbs = entities.orbs
+const relics = entities.relics
+const healthPacks = entities.healthPacks
+const pulses = entities.pulses
+const particles = entities.particles
+const chainArcs = entities.chainArcs
+const bladePositions = orbitCache.blades
+const solarPositions = orbitCache.solars
 const ENEMY_SEP_RADIUS = 42
 const ENEMY_SEP_FORCE = 120
 const playerSprite = new Image()
@@ -151,6 +170,7 @@ function setZoomIndex(nextIndex) {
   applyZoom()
 }
 
+// Data definitions
 const upgradeDefs = [
   {
     id: 'pulse',
@@ -357,13 +377,24 @@ const statUpgrades = [
   },
 ]
 
-let shootTimer = 0
-let spawnTimer = 0
-let pulseTimer = 0
-let novaTimer = 0
-let frostTimer = 0
-let chainTimer = 0
-let relicTimer = 0
+const timers = {
+  shoot: 0,
+  spawn: 0,
+  pulse: 0,
+  nova: 0,
+  frost: 0,
+  chain: 0,
+  relic: 0,
+}
+
+// Utility helpers
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value))
+}
+
+function distance(ax, ay, bx, by) {
+  return Math.hypot(ax - bx, ay - by)
+}
 
 function resetGame() {
   zoomIndex = 1
@@ -431,13 +462,13 @@ function resetGame() {
   state.elapsed = 0
   state.pendingLevels = 0
   state.pendingStatUps = 0
-  shootTimer = 0
-  spawnTimer = 0
-  pulseTimer = 0
-  novaTimer = 0
-  frostTimer = 0
-  chainTimer = 0
-  relicTimer = 6
+  timers.shoot = 0
+  timers.spawn = 0
+  timers.pulse = 0
+  timers.nova = 0
+  timers.frost = 0
+  timers.chain = 0
+  timers.relic = 6
 }
 
 function formatTime(seconds) {
@@ -557,8 +588,8 @@ function nearestEnemy() {
 }
 
 function shoot(dt) {
-  shootTimer -= dt
-  if (shootTimer > 0) return
+  timers.shoot -= dt
+  if (timers.shoot > 0) return
   const target = nearestEnemy()
   if (!target) return
 
@@ -579,12 +610,12 @@ function shoot(dt) {
     type: 'fire',
   })
 
-  shootTimer = 1 / player.fireRate
+  timers.shoot = 1 / player.fireRate
 }
 
 function fireFrostShards(dt) {
-  frostTimer -= dt
-  if (frostTimer > 0) return
+  timers.frost -= dt
+  if (timers.frost > 0) return
   const target = nearestEnemy()
   if (!target) return
 
@@ -610,7 +641,7 @@ function fireFrostShards(dt) {
     })
   }
 
-  frostTimer = 1 / player.frostFireRate
+  timers.frost = 1 / player.frostFireRate
 }
 
 function pulseShockwave() {
@@ -804,11 +835,12 @@ function showLevelUp() {
   }
 }
 
-function update(dt) {
-  if (state.paused) return
-
+// Update systems
+function updateTime(dt) {
   state.elapsed += dt
+}
 
+function updatePlayerMovement(dt) {
   let moveX = (input.right ? 1 : 0) - (input.left ? 1 : 0)
   let moveY = (input.down ? 1 : 0) - (input.up ? 1 : 0)
 
@@ -825,7 +857,7 @@ function update(dt) {
     }
   }
 
-  let mag = Math.hypot(moveX, moveY)
+  const mag = Math.hypot(moveX, moveY)
   if (mag > 0) {
     const nx = moveX / mag
     const ny = moveY / mag
@@ -833,15 +865,19 @@ function update(dt) {
     player.y += ny * player.speed * dt
   }
 
-  player.x = Math.max(player.r, Math.min(WORLD_WIDTH - player.r, player.x))
-  player.y = Math.max(player.r, Math.min(WORLD_HEIGHT - player.r, player.y))
+  player.x = clamp(player.x, player.r, WORLD_WIDTH - player.r)
+  player.y = clamp(player.y, player.r, WORLD_HEIGHT - player.r)
+}
 
-  relicTimer -= dt
-  if (relicTimer <= 0 && relics.length < 2) {
+function updateRelicSpawner(dt) {
+  timers.relic -= dt
+  if (timers.relic <= 0 && relics.length < 2) {
     addRelic()
-    relicTimer = 18
+    timers.relic = 18
   }
+}
 
+function updateOrbitCaches(dt) {
   player.bladeAngle += player.bladeSpeed * dt
   bladePositions.length = 0
   if (player.bladesUnlocked && player.bladeCount > 0) {
@@ -867,42 +903,48 @@ function update(dt) {
       })
     }
   }
+}
 
+function updateWeaponFiring(dt) {
   shoot(dt)
   if (player.frostUnlocked) fireFrostShards(dt)
 
   if (player.pulseUnlocked) {
-    pulseTimer -= dt
-    if (pulseTimer <= 0) {
+    timers.pulse -= dt
+    if (timers.pulse <= 0) {
       pulseShockwave()
-      pulseTimer = player.pulseCooldown
+      timers.pulse = player.pulseCooldown
     }
   }
 
   if (player.novaUnlocked) {
-    novaTimer -= dt
-    if (novaTimer <= 0) {
+    timers.nova -= dt
+    if (timers.nova <= 0) {
       novaShockwave()
-      novaTimer = player.novaCooldown
+      timers.nova = player.novaCooldown
     }
   }
 
   if (player.chainUnlocked) {
-    chainTimer -= dt
-    if (chainTimer <= 0) {
+    timers.chain -= dt
+    if (timers.chain <= 0) {
       chainLightning()
-      chainTimer = player.chainCooldown
+      timers.chain = player.chainCooldown
     }
   }
+}
 
-  spawnTimer -= dt
+function updateEnemySpawner(dt) {
+  timers.spawn -= dt
   const wave = Math.floor(state.elapsed / state.waveDuration) + 1
   const spawnInterval = Math.max(0.18, 1.2 - wave * 0.06)
-  if (spawnTimer <= 0) {
+  if (timers.spawn <= 0) {
     spawnEnemy()
-    spawnTimer = spawnInterval
+    timers.spawn = spawnInterval
   }
+}
 
+function updateEnemies(dt) {
   for (let i = enemies.length - 1; i >= 0; i -= 1) {
     const enemy = enemies[i]
     const dx = player.x - enemy.x
@@ -931,7 +973,6 @@ function update(dt) {
     const seekVY = (dy / dist) * enemy.speed * slow
     const sepVX = sepX * ENEMY_SEP_FORCE
     const sepVY = sepY * ENEMY_SEP_FORCE
-
     const desiredVX = seekVX + sepVX
     const desiredVY = seekVY + sepVY
 
@@ -943,7 +984,6 @@ function update(dt) {
     const ky = enemy.knockY
     enemy.knockX *= 0.85
     enemy.knockY *= 0.85
-
     enemy.x += (enemy.vx + kx) * dt
     enemy.y += (enemy.vy + ky) * dt
 
@@ -999,7 +1039,9 @@ function update(dt) {
       }
     }
   }
+}
 
+function updateBullets(dt) {
   for (let i = bullets.length - 1; i >= 0; i -= 1) {
     const bullet = bullets[i]
     bullet.x += bullet.vx * dt
@@ -1025,9 +1067,7 @@ function update(dt) {
         hit = true
         if (bullet.type === 'frost') {
           bullet.pierce -= 1
-          if (bullet.pierce > 0) {
-            hit = false
-          }
+          if (bullet.pierce > 0) hit = false
         }
         break
       }
@@ -1044,7 +1084,9 @@ function update(dt) {
       bullets.splice(i, 1)
     }
   }
+}
 
+function updateParticles(dt) {
   for (let i = particles.length - 1; i >= 0; i -= 1) {
     const p = particles[i]
     p.life -= dt
@@ -1053,32 +1095,34 @@ function update(dt) {
     p.r *= 0.96
     if (p.life <= 0 || p.r < 0.4) particles.splice(i, 1)
   }
+}
 
+function updateRelicCollisions(dt) {
   for (let i = relics.length - 1; i >= 0; i -= 1) {
     const relic = relics[i]
     relic.wobble += dt * 4
-    const dx = player.x - relic.x
-    const dy = player.y - relic.y
-    const dist = Math.hypot(dx, dy)
+    const dist = distance(player.x, player.y, relic.x, relic.y)
     if (dist < player.r + relic.r) {
       relics.splice(i, 1)
       state.pendingStatUps += 1
       if (!state.paused) openStatUpgradeFromQueue()
     }
   }
+}
 
+function updateHealthPackCollisions(dt) {
   for (let i = healthPacks.length - 1; i >= 0; i -= 1) {
     const pack = healthPacks[i]
     pack.wobble += dt * 5
-    const dx = player.x - pack.x
-    const dy = player.y - pack.y
-    const dist = Math.hypot(dx, dy)
+    const dist = distance(player.x, player.y, pack.x, pack.y)
     if (dist < player.r + pack.r) {
       healthPacks.splice(i, 1)
       player.hp = Math.min(player.maxHp, player.hp + 25)
     }
   }
+}
 
+function updateXpOrbs(dt) {
   for (let i = orbs.length - 1; i >= 0; i -= 1) {
     const orb = orbs[i]
     orb.drift += dt * 2
@@ -1091,17 +1135,16 @@ function update(dt) {
     if (dist < player.pickupRadius + orb.r) {
       gainXp(orb.value)
       orbs.splice(i, 1)
-    } else if (
-      getUpgradeLevel('magnet') > 0 &&
-      dist < player.pickupRadius * 3
-    ) {
+    } else if (getUpgradeLevel('magnet') > 0 && dist < player.pickupRadius * 3) {
       const pull = (1 - dist / (player.pickupRadius * 3)) * 160
       orb.x += (dx / dist) * pull * dt
       orb.baseY += (dy / dist) * pull * dt
       orb.y = orb.baseY + orb.bob
     }
   }
+}
 
+function updatePulseEffects(dt) {
   for (let i = pulses.length - 1; i >= 0; i -= 1) {
     const pulse = pulses[i]
     pulse.life -= dt
@@ -1109,13 +1152,17 @@ function update(dt) {
     pulse.r = pulse.max * Math.min(1, t)
     if (pulse.life <= 0) pulses.splice(i, 1)
   }
+}
 
+function updateChainArcs(dt) {
   for (let i = chainArcs.length - 1; i >= 0; i -= 1) {
     const arc = chainArcs[i]
     arc.life -= dt
     if (arc.life <= 0) chainArcs.splice(i, 1)
   }
+}
 
+function checkGameOver() {
   if (player.hp <= 0) {
     state.running = false
     instructions.style.display = 'grid'
@@ -1126,17 +1173,41 @@ function update(dt) {
   }
 }
 
-function draw() {
+function update(dt) {
+  if (state.paused) return
+
+  updateTime(dt)
+  updatePlayerMovement(dt)
+  updateRelicSpawner(dt)
+  updateOrbitCaches(dt)
+  updateWeaponFiring(dt)
+  updateEnemySpawner(dt)
+  updateEnemies(dt)
+  updateBullets(dt)
+  updateParticles(dt)
+  updateRelicCollisions(dt)
+  updateHealthPackCollisions(dt)
+  updateXpOrbs(dt)
+  updatePulseEffects(dt)
+  updateChainArcs(dt)
+  checkGameOver()
+}
+
+// Render systems
+function beginFrame() {
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   ctx.imageSmoothingEnabled = false
   ctx.save()
   ctx.scale(zoom, zoom)
-  const cam = camera()
+}
 
+function drawWorldBackground() {
   ctx.fillStyle = '#efe7d6'
   ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+}
 
+function drawWorldGrid(cam) {
   ctx.strokeStyle = 'rgba(0,0,0,0.06)'
   ctx.lineWidth = 1
   const grid = 48
@@ -1154,7 +1225,9 @@ function draw() {
     ctx.lineTo(VIEW_WIDTH, y - cam.y)
     ctx.stroke()
   }
+}
 
+function drawXpOrbs(cam) {
   for (const orb of orbs) {
     const height = (orb.bob + 10) / 20
     const shadowScale = 0.8 + (1 - height) * 0.6
@@ -1177,7 +1250,9 @@ function draw() {
     ctx.arc(orb.x - cam.x, orb.y - cam.y, orb.r, 0, Math.PI * 2)
     ctx.fill()
   }
+}
 
+function drawPulseRings(cam) {
   for (const pulse of pulses) {
     const alpha = 0.35 + 0.35 * Math.sin((pulse.r / pulse.max) * Math.PI * 4)
     const color =
@@ -1190,7 +1265,9 @@ function draw() {
     ctx.arc(pulse.x - cam.x, pulse.y - cam.y, pulse.r, 0, Math.PI * 2)
     ctx.stroke()
   }
+}
 
+function drawChainArcLines(cam) {
   for (const arc of chainArcs) {
     const alpha = Math.min(1, arc.life / 0.2)
     ctx.strokeStyle = `rgba(120, 200, 255, ${alpha})`
@@ -1200,7 +1277,9 @@ function draw() {
     ctx.lineTo(arc.x2 - cam.x, arc.y2 - cam.y)
     ctx.stroke()
   }
+}
 
+function drawBladeOrbits(cam) {
   for (const blade of bladePositions) {
     const size = player.bladeSize
     if (bladeSprite.complete && bladeSprite.naturalWidth > 0) {
@@ -1217,7 +1296,9 @@ function draw() {
       ctx.fill()
     }
   }
+}
 
+function drawSolarOrbits(cam) {
   for (const orb of solarPositions) {
     ctx.fillStyle = 'rgba(255, 210, 120, 0.95)'
     ctx.beginPath()
@@ -1229,14 +1310,18 @@ function draw() {
     ctx.arc(orb.x - cam.x, orb.y - cam.y, 9, 0, Math.PI * 2)
     ctx.stroke()
   }
+}
 
+function drawBullets(cam) {
   for (const bullet of bullets) {
     ctx.fillStyle = bullet.type === 'frost' ? '#7cc7ff' : '#ff7b3a'
     ctx.beginPath()
     ctx.arc(bullet.x - cam.x, bullet.y - cam.y, bullet.r, 0, Math.PI * 2)
     ctx.fill()
   }
+}
 
+function drawParticles(cam) {
   for (const p of particles) {
     const maxLife = p.color === 'blood' ? 0.55 : 0.35
     const alpha = Math.max(0, Math.min(1, p.life / maxLife))
@@ -1251,7 +1336,9 @@ function draw() {
     ctx.arc(p.x - cam.x, p.y - cam.y, p.r, 0, Math.PI * 2)
     ctx.fill()
   }
+}
 
+function drawRelics(cam) {
   for (const relic of relics) {
     const pulse = 0.6 + 0.4 * Math.sin(relic.wobble)
     ctx.fillStyle = 'rgba(40, 40, 40, 0.25)'
@@ -1286,7 +1373,9 @@ function draw() {
       ctx.fill()
     }
   }
+}
 
+function drawHealthPacks(cam) {
   for (const pack of healthPacks) {
     const pulse = 0.6 + 0.4 * Math.sin(pack.wobble)
     if (healthSprite.complete && healthSprite.naturalWidth > 0) {
@@ -1308,7 +1397,9 @@ function draw() {
       ctx.fill()
     }
   }
+}
 
+function drawShockLinks(cam) {
   const shocked = enemies.filter(enemy => enemy.shockTimer > 0)
   if (shocked.length > 1) {
     const pulse = 0.35 + 0.35 * Math.sin(state.elapsed * 8)
@@ -1323,7 +1414,9 @@ function draw() {
       }
     }
   }
+}
 
+function drawEnemies(cam) {
   for (const enemy of enemies) {
     const sprite = enemy.tier === 2 ? enemyBigSprite : enemySmallSprite
     ctx.fillStyle = 'rgba(40, 40, 40, 0.28)'
@@ -1368,7 +1461,9 @@ function draw() {
       ctx.stroke()
     }
   }
+}
 
+function drawPlayer(cam) {
   if (playerSprite.complete && playerSprite.naturalWidth > 0) {
     const size = player.r * 2
     ctx.fillStyle = 'rgba(40, 40, 40, 0.32)'
@@ -1408,7 +1503,9 @@ function draw() {
     ctx.arc(player.x - cam.x, player.y - cam.y, player.r, 0, Math.PI * 2)
     ctx.fill()
   }
+}
 
+function drawPlayerHpRing(cam) {
   ctx.strokeStyle = '#d94f2b'
   ctx.lineWidth = 3
   const hpRatio = Math.max(0, player.hp / player.maxHp)
@@ -1421,9 +1518,13 @@ function draw() {
     -Math.PI / 2 + Math.PI * 2 * hpRatio,
   )
   ctx.stroke()
-  ctx.restore()
+}
 
-  // Minimap
+function endWorldTransform() {
+  ctx.restore()
+}
+
+function drawMinimap() {
   const mapPadding = 16
   const mapWidth = 180
   const mapHeight = Math.round((WORLD_HEIGHT / WORLD_WIDTH) * mapWidth)
@@ -1464,6 +1565,28 @@ function draw() {
   ctx.restore()
 }
 
+function draw() {
+  beginFrame()
+  const cam = camera()
+  drawWorldBackground()
+  drawWorldGrid(cam)
+  drawXpOrbs(cam)
+  drawPulseRings(cam)
+  drawChainArcLines(cam)
+  drawBladeOrbits(cam)
+  drawSolarOrbits(cam)
+  drawBullets(cam)
+  drawParticles(cam)
+  drawRelics(cam)
+  drawHealthPacks(cam)
+  drawShockLinks(cam)
+  drawEnemies(cam)
+  drawPlayer(cam)
+  drawPlayerHpRing(cam)
+  endWorldTransform()
+  drawMinimap()
+}
+
 function loop(timestamp) {
   if (!state.running) {
     state.lastTime = timestamp
@@ -1494,18 +1617,20 @@ function startGame() {
   music.play().catch(() => {})
 }
 
+// Input wiring
+function setKeyState(key, isDown) {
+  if (key === 'ArrowUp' || key === 'w') input.up = isDown
+  if (key === 'ArrowDown' || key === 's') input.down = isDown
+  if (key === 'ArrowLeft' || key === 'a') input.left = isDown
+  if (key === 'ArrowRight' || key === 'd') input.right = isDown
+}
+
 window.addEventListener('keydown', event => {
-  if (event.key === 'ArrowUp' || event.key === 'w') input.up = true
-  if (event.key === 'ArrowDown' || event.key === 's') input.down = true
-  if (event.key === 'ArrowLeft' || event.key === 'a') input.left = true
-  if (event.key === 'ArrowRight' || event.key === 'd') input.right = true
+  setKeyState(event.key, true)
 })
 
 window.addEventListener('keyup', event => {
-  if (event.key === 'ArrowUp' || event.key === 'w') input.up = false
-  if (event.key === 'ArrowDown' || event.key === 's') input.down = false
-  if (event.key === 'ArrowLeft' || event.key === 'a') input.left = false
-  if (event.key === 'ArrowRight' || event.key === 'd') input.right = false
+  setKeyState(event.key, false)
 })
 
 startBtn.addEventListener('click', startGame)
