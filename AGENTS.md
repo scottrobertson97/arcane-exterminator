@@ -2,30 +2,38 @@
 
 ## Project Overview
 - Single-page browser game (HTML5 canvas) in the Vampire Survivors style.
-- No build tooling or framework; load `index.html` directly in a browser.
+- No build tooling or framework; runs as native ES modules in the browser.
 - Core files:
   - `index.html`: HUD, overlays, canvas, zoom controls.
   - `style.css`: layout/theme/overlay/button styles.
-  - `game.js`: all runtime logic, state, rendering, input, progression.
+  - `src/main.js`: composition root and update/draw orchestration.
 - Assets:
   - Sprites in `sprites/` (player, enemies, relic chest, knife, health icon).
   - Background music `Glinting Gold.wav`.
 
-## Architecture Summary (`game.js`)
-- Top-level state buckets:
-  - `state`: run/pause/time/wave and queued upgrade counters.
-  - `input`: keyboard + mouse/pointer target movement state.
-  - `player`: stats, unlock flags, timers/scalars for all weapon systems.
-- Entity arrays:
-  - World actors: `enemies`, `bullets`, `orbs`, `relics`, `healthPacks`.
-  - Effect layers: `pulses`, `particles`, `chainArcs`.
-  - Derived orbit positions each frame: `bladePositions`, `solarPositions`.
-- Loop shape:
-  - `requestAnimationFrame(loop)` drives `update(dt)`, `draw()`, `updateHud()`.
-  - `update(dt)` exits early when `state.paused` is true (menus pause gameplay).
-- Camera + world:
-  - World bounds: `WORLD_WIDTH`/`WORLD_HEIGHT`.
-  - Viewport size is zoom-aware (`VIEW_WIDTH`/`VIEW_HEIGHT`) and follows player via `camera()`.
+## Module Layout (`src/`)
+- `config/`
+  - `constants.js`: world, zoom, and enemy separation constants.
+- `core/`
+  - `dom.js`: canvas and UI element references.
+  - `assets.js`: sprite/audio loading.
+  - `camera.js`: camera position, zoom state application, resize handling.
+  - `loop.js`: rAF loop driver (`configureLoop`, `loop`).
+  - `utils.js`: generic math helpers (`clamp`, `distance`).
+- `state/`
+  - `gameState.js`: shared mutable runtime objects (`state`, `input`, `player`, `entities`, `orbitCache`, `timers`, `zoomState`).
+  - `reset.js`: reset source of truth for a new run.
+- `data/`
+  - `upgrades.js`: weapon upgrade definitions and relic stat upgrades.
+- `systems/`
+  - `combat/`: targeting, projectiles, abilities, orbit cache updates.
+  - `world/`: spawning, enemy simulation, pickups, transient effects lifecycle.
+  - `progression/`: XP handling and level/relic menu flows.
+  - `render/`: frame/world/effects/entities/minimap render passes.
+  - `ui/`: HUD formatting and updates.
+  - `input/`: key + mouse/pointer binding and target updates.
+- `main.js`
+  - Wires cross-system callbacks, owns `update()`/`draw()` orchestrator order, bootstraps listeners, and starts the loop.
 
 ## UI and Input Systems
 - HUD fields: wave/time/hp/level/xp.
@@ -37,6 +45,7 @@
 - Input:
   - Keyboard movement: WASD + Arrow keys.
   - Mouse/pointer movement: hold/capture and move toward world-space cursor target.
+  - Input module: `src/systems/input/controls.js`.
 
 ## Combat and Progression Systems
 - Baseline attack:
@@ -53,7 +62,7 @@
 - Relic stat upgrades (`statUpgrades`):
   - Heavy Rounds, Overclock, Sprint Boots, Iron Heart, Railcast.
 - Progression flow:
-  - Enemy death -> XP orb drop (+ optional health pack drop chance).
+  - Enemy death -> XP orb drop (+ health pack drop chance).
   - XP gain -> level queue (`state.pendingLevels`) -> `showLevelUp()`.
   - Relic pickup -> stat queue (`state.pendingStatUps`) -> `showStatUpgrades()`.
   - Queues chain correctly while paused (multiple level/relic rewards are handled in order).
@@ -81,7 +90,8 @@
 
 ## Key Constants and Tunables
 - World/camera:
-  - `WORLD_WIDTH`, `WORLD_HEIGHT`, `VIEW_WIDTH`, `VIEW_HEIGHT`, `zoomLevels`.
+  - `WORLD_WIDTH`, `WORLD_HEIGHT`, `zoomLevels`.
+  - Runtime viewport/zoom state in `zoomState` (`viewWidth`, `viewHeight`, `zoom`, `index`).
 - Enemy flocking:
   - `ENEMY_SEP_RADIUS`, `ENEMY_SEP_FORCE`.
 - Player baselines in `player` object:
@@ -89,7 +99,7 @@
   - Defensive/mobility: `maxHp`, `speed`, `pickupRadius`.
   - Ability tunables: pulse/nova/blade/frost/chain/solar fields.
 - Timers:
-  - Global: `shootTimer`, `spawnTimer`, `pulseTimer`, `novaTimer`, `frostTimer`, `chainTimer`, `relicTimer`.
+  - Grouped in `timers`: `shoot`, `spawn`, `pulse`, `nova`, `frost`, `chain`, `relic`.
 
 ## Reset and State Hygiene Rules
 - `resetGame()` is the source of truth for run initialization.
@@ -99,12 +109,22 @@
 - If adding a new upgrade line:
   - Add `player` fields, `upgradeDefs` entry, and reset logic together.
   - Ensure UI text and max levels are consistent with apply behavior.
+- Keep `state/gameState.js` as the only runtime state source; avoid duplicate shadow state in modules.
 
 ## Development Guidelines
 - Prefer minimal gameplay-affecting changes unless explicitly requested.
 - Preserve feel of movement/combat cadence when tuning values.
-- Keep single-file edits in `game.js` focused and localized.
+- Keep edits localized to the owning module under `src/`.
+- Avoid creating circular imports; use callback setters (as done in progression modules) when needed.
 - Avoid adding dependencies or build steps.
+- Keep `update()` and `draw()` pass order identical unless intentionally changing gameplay/render behavior.
+
+## Runtime Notes
+- Because the project uses ES modules, opening `index.html` via `file://` may fail with CORS restrictions.
+- Run through a local HTTP server for manual testing, for example:
+  - `python3 -m http.server 5500`
+  - open `http://localhost:5500/`
+- GitHub Pages is compatible with this module setup.
 
 ## Manual Test Checklist
 - Start/restart flow and music behavior.
