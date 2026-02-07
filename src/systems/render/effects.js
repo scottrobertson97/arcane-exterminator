@@ -29,12 +29,13 @@ export function drawXpOrbs(cam) {
 export function drawPulseRings(cam) {
   for (const pulse of entities.pulses) {
     const alpha = 0.35 + 0.35 * Math.sin((pulse.r / pulse.max) * Math.PI * 4)
-    const color =
-      pulse.type === 'nova'
-        ? `rgba(190, 120, 255, ${alpha})`
+    const color = pulse.type === 'nova'
+      ? `rgba(190, 120, 255, ${alpha})`
+      : pulse.type === 'volatile'
+        ? `rgba(255, 120, 70, ${alpha})`
         : `rgba(80, 170, 255, ${alpha})`
     ctx.strokeStyle = color
-    ctx.lineWidth = pulse.type === 'nova' ? 3 : 4
+    ctx.lineWidth = pulse.type === 'volatile' ? 5 : pulse.type === 'nova' ? 3 : 4
     ctx.beginPath()
     ctx.arc(pulse.x - cam.x, pulse.y - cam.y, pulse.r, 0, Math.PI * 2)
     ctx.stroke()

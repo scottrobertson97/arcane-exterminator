@@ -116,6 +116,23 @@ export function drawHealthPacks(cam) {
 export function drawEnemies(cam) {
   for (const enemy of entities.enemies) {
     const sprite = enemy.tier === 2 ? enemyBigSprite : enemySmallSprite
+    if (enemy.isElite) {
+      const pulse = 0.35 + 0.25 * Math.sin(enemy.elitePulse || 0)
+      const affixColor =
+        enemy.affix === 'fast'
+          ? `rgba(255, 209, 102, ${pulse})`
+          : enemy.affix === 'tank'
+            ? `rgba(114, 214, 134, ${pulse})`
+            : enemy.affix === 'volatile'
+              ? `rgba(255, 129, 92, ${pulse})`
+              : `rgba(188, 132, 255, ${pulse})`
+      ctx.strokeStyle = affixColor
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.arc(enemy.x - cam.x, enemy.y - cam.y, enemy.r + 8, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+
     ctx.fillStyle = 'rgba(40, 40, 40, 0.28)'
     ctx.beginPath()
     ctx.ellipse(

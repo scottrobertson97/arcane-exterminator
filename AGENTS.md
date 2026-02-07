@@ -50,6 +50,9 @@
 ## Combat and Progression Systems
 - Baseline attack:
   - Auto-fired firebolts target `nearestEnemy()` via `shoot(dt)`.
+- Enemy variants:
+  - Rare elite enemies spawn with one affix: `fast`, `tank`, `volatile`, `leech`.
+  - Elite enemies grant bonus XP on kill and have affix-specific visuals/behavior.
 - Unlockable/upgradeable weapon lines (`upgradeDefs`):
   - Lightning Pulse (`pulseShockwave`)
   - Orbiting Blades
@@ -71,11 +74,14 @@
 - Spawning:
   - `spawnEnemy()` places enemies near camera-edge margins.
   - Wave scales by elapsed time (`state.waveDuration`), affecting tier, HP, speed, spawn rate.
+  - Elite spawn chance scales by wave and caps at a max chance.
 - Movement:
   - Seek player + separation flocking (`ENEMY_SEP_RADIUS`, `ENEMY_SEP_FORCE`).
   - Steering interpolation via velocity smoothing.
   - Knockback stored as decaying `knockX`/`knockY`.
   - Shock debuff slows movement and drives electric VFX.
+  - Leech elites heal when damaging the player.
+  - Volatile elites explode on death and can damage the player in radius.
 
 ## Rendering Pipeline
 - `draw()` order:
@@ -94,6 +100,9 @@
   - Runtime viewport/zoom state in `zoomState` (`viewWidth`, `viewHeight`, `zoom`, `index`).
 - Enemy flocking:
   - `ENEMY_SEP_RADIUS`, `ENEMY_SEP_FORCE`.
+- Elite enemies:
+  - `ELITE_BASE_CHANCE`, `ELITE_WAVE_BONUS`, `ELITE_MAX_CHANCE`.
+  - Affix tunables: fast speed multiplier, tank HP multiplier, leech heal factor, volatile radius/damage.
 - Player baselines in `player` object:
   - Core combat: `damage`, `fireRate`, `bulletSpeed`.
   - Defensive/mobility: `maxHp`, `speed`, `pickupRadius`.
@@ -118,6 +127,7 @@
 - Avoid creating circular imports; use callback setters (as done in progression modules) when needed.
 - Avoid adding dependencies or build steps.
 - Keep `update()` and `draw()` pass order identical unless intentionally changing gameplay/render behavior.
+- Use `FEATURE_BACKLOG.md` for staged feature rollout planning (one feature per branch with parity gates).
 
 ## Runtime Notes
 - Because the project uses ES modules, opening `index.html` via `file://` may fail with CORS restrictions.
@@ -131,6 +141,7 @@
 - Keyboard and mouse/touch movement.
 - Zoom in/out controls and camera clamping at world edges.
 - Enemy spawn pacing across early waves.
+- Elite enemy affix behaviors (`fast`, `tank`, `volatile`, `leech`) and readability.
 - XP pickup, level-up menu, repeated queued level choices.
 - Relic spawn/pickup, stat menu, queued relic choices.
 - Unlock/upgrade behavior for pulse, blades, frost, nova, chain, and solar orbs.

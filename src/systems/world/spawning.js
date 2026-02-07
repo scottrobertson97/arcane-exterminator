@@ -1,6 +1,20 @@
-import { WORLD_WIDTH, WORLD_HEIGHT } from '../../config/constants.js'
+import {
+  ELITE_BASE_CHANCE,
+  ELITE_FAST_SPEED_MULT,
+  ELITE_MAX_CHANCE,
+  ELITE_TANK_HP_MULT,
+  ELITE_WAVE_BONUS,
+  WORLD_WIDTH,
+  WORLD_HEIGHT,
+} from '../../config/constants.js'
 import { entities, state } from '../../state/gameState.js'
 import { camera } from '../../core/camera.js'
+
+const eliteAffixes = ['fast', 'tank', 'volatile', 'leech']
+
+function randomEliteAffix() {
+  return eliteAffixes[Math.floor(Math.random() * eliteAffixes.length)]
+}
 
 export function addOrb(x, y, value) {
   entities.orbs.push({
@@ -54,18 +68,40 @@ export function spawnEnemy() {
   y = Math.max(0, Math.min(WORLD_HEIGHT, y))
 
   const tier = Math.random() < Math.min(0.15 + wave * 0.01, 0.4) ? 2 : 1
+  const eliteChance = Math.min(ELITE_MAX_CHANCE, ELITE_BASE_CHANCE + wave * ELITE_WAVE_BONUS)
+  const isElite = Math.random() < eliteChance
+  const affix = isElite ? randomEliteAffix() : null
   const baseHp = tier === 2 ? 70 : 40
   const baseSpeed = tier === 2 ? 70 : 90
+  let hp = Math.round(baseHp + wave * 8)
+  let speed = baseSpeed + wave * 4
+  let r = tier === 2 ? 16 : 12
+  const damage = tier === 2 ? 18 : 12
+
+  if (affix === 'fast') {
+    speed *= ELITE_FAST_SPEED_MULT
+  } else if (affix === 'tank') {
+    hp = Math.round(hp * ELITE_TANK_HP_MULT)
+    speed *= 0.88
+    r += 2
+  } else if (affix === 'leech') {
+    hp = Math.round(hp * 1.15)
+  } else if (affix === 'volatile') {
+    speed *= 1.08
+  }
 
   entities.enemies.push({
     x,
     y,
-    r: tier === 2 ? 16 : 12,
-    hp: Math.round(baseHp + wave * 8),
-    maxHp: Math.round(baseHp + wave * 8),
-    speed: baseSpeed + wave * 4,
-    damage: tier === 2 ? 18 : 12,
+    r,
+    hp,
+    maxHp: hp,
+    speed,
+    damage,
     tier,
+    isElite,
+    affix,
+    elitePulse: Math.random() * Math.PI * 2,
     vx: 0,
     vy: 0,
     knockX: 0,
