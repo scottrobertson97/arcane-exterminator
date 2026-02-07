@@ -133,6 +133,99 @@ export const upgradeDefs = [
     },
   },
   {
+    id: 'starfall',
+    max: 4,
+    name: 'Starfall Barrage',
+    desc: lvl =>
+      lvl === 0
+        ? 'Unlocks starfall barrage'
+        : lvl === 1
+          ? '+2 projectiles per burst'
+          : lvl === 2
+            ? '+4 damage'
+            : '-20% cooldown',
+    canShow: () => true,
+    apply: lvl => {
+      if (lvl === 1) player.starfallUnlocked = true
+      if (lvl === 2) player.starfallCount += 2
+      if (lvl === 3) player.starfallDamage += 4
+      if (lvl === 4) {
+        player.starfallCooldown = +(player.starfallCooldown * 0.8).toFixed(2)
+      }
+    },
+  },
+  {
+    id: 'mines',
+    max: 5,
+    name: 'Arc Mines',
+    desc: lvl =>
+      lvl === 0
+        ? 'Unlocks arc mines'
+        : lvl === 1
+          ? '-20% cooldown'
+          : lvl === 2
+            ? '+14 explosion damage'
+            : lvl === 3
+              ? '+18 blast radius'
+              : '+1 max active mine',
+    canShow: () => true,
+    apply: lvl => {
+      if (lvl === 1) player.mineUnlocked = true
+      if (lvl === 2) player.mineCooldown = +(player.mineCooldown * 0.8).toFixed(2)
+      if (lvl === 3) player.mineDamage += 14
+      if (lvl === 4) player.mineRadius += 18
+      if (lvl === 5) player.mineMaxActive += 1
+    },
+  },
+  {
+    id: 'trail',
+    max: 5,
+    name: 'Molten Trail',
+    desc: lvl =>
+      lvl === 0
+        ? 'Unlocks molten trail'
+        : lvl === 1
+          ? '-25% patch spawn interval'
+          : lvl === 2
+            ? '+6 DPS'
+            : lvl === 3
+              ? '+0.6s patch life'
+              : '+8 patch radius',
+    canShow: () => true,
+    apply: lvl => {
+      if (lvl === 1) player.trailUnlocked = true
+      if (lvl === 2) {
+        player.trailSpawnInterval = +(player.trailSpawnInterval * 0.75).toFixed(3)
+      }
+      if (lvl === 3) player.trailDps += 6
+      if (lvl === 4) player.trailPatchLife = +(player.trailPatchLife + 0.6).toFixed(2)
+      if (lvl === 5) player.trailRadius += 8
+    },
+  },
+  {
+    id: 'vortex',
+    max: 5,
+    name: 'Gravity Well',
+    desc: lvl =>
+      lvl === 0
+        ? 'Unlocks gravity well'
+        : lvl === 1
+          ? '+0.8s duration'
+          : lvl === 2
+            ? '-18% cooldown'
+            : lvl === 3
+              ? '+35 radius'
+              : '+6 DPS',
+    canShow: () => true,
+    apply: lvl => {
+      if (lvl === 1) player.vortexUnlocked = true
+      if (lvl === 2) player.vortexDuration = +(player.vortexDuration + 0.8).toFixed(2)
+      if (lvl === 3) player.vortexCooldown = +(player.vortexCooldown * 0.82).toFixed(2)
+      if (lvl === 4) player.vortexRadius += 35
+      if (lvl === 5) player.vortexDps += 6
+    },
+  },
+  {
     id: 'solar',
     max: 4,
     name: 'Solar Orbs',

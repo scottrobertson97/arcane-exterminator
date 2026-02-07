@@ -29,15 +29,56 @@ export function drawXpOrbs(cam) {
 export function drawPulseRings(cam) {
   for (const pulse of entities.pulses) {
     const alpha = 0.35 + 0.35 * Math.sin((pulse.r / pulse.max) * Math.PI * 4)
-    const color = pulse.type === 'nova'
-      ? `rgba(190, 120, 255, ${alpha})`
-      : pulse.type === 'volatile'
-        ? `rgba(255, 120, 70, ${alpha})`
-        : `rgba(80, 170, 255, ${alpha})`
+    const color =
+      pulse.type === 'nova'
+        ? `rgba(190, 120, 255, ${alpha})`
+        : pulse.type === 'volatile'
+          ? `rgba(255, 120, 70, ${alpha})`
+          : pulse.type === 'mine'
+            ? `rgba(255, 175, 90, ${alpha})`
+            : pulse.type === 'vortex'
+              ? `rgba(145, 175, 255, ${alpha})`
+              : `rgba(80, 170, 255, ${alpha})`
     ctx.strokeStyle = color
-    ctx.lineWidth = pulse.type === 'volatile' ? 5 : pulse.type === 'nova' ? 3 : 4
+    ctx.lineWidth =
+      pulse.type === 'volatile' ? 5 : pulse.type === 'nova' ? 3 : pulse.type === 'mine' ? 4 : 4
     ctx.beginPath()
     ctx.arc(pulse.x - cam.x, pulse.y - cam.y, pulse.r, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+}
+
+export function drawTrailPatches(cam) {
+  for (const patch of entities.trails) {
+    const life = Math.max(0, patch.life / patch.maxLife)
+    const glow = 0.3 + (1 - life) * 0.2
+    ctx.fillStyle = `rgba(190, 70, 30, ${(0.25 + life * 0.28).toFixed(3)})`
+    ctx.beginPath()
+    ctx.arc(patch.x - cam.x, patch.y - cam.y, patch.r, 0, Math.PI * 2)
+    ctx.fill()
+
+    ctx.strokeStyle = `rgba(255, 168, 90, ${(0.2 + glow).toFixed(3)})`
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(patch.x - cam.x, patch.y - cam.y, patch.r * 0.72, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+}
+
+export function drawVortexRings(cam) {
+  for (const vortex of entities.vortexes) {
+    const life = Math.max(0, vortex.life / vortex.maxLife)
+    const swirl = (1 - life) * Math.PI * 2
+    ctx.strokeStyle = `rgba(130, 170, 255, ${(0.3 + life * 0.35).toFixed(3)})`
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.arc(vortex.x - cam.x, vortex.y - cam.y, vortex.r, 0, Math.PI * 2)
+    ctx.stroke()
+
+    ctx.strokeStyle = `rgba(170, 205, 255, ${(0.25 + life * 0.35).toFixed(3)})`
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(vortex.x - cam.x, vortex.y - cam.y, vortex.r * (0.35 + 0.2 * Math.sin(swirl)), 0, Math.PI * 2)
     ctx.stroke()
   }
 }
@@ -60,6 +101,8 @@ export function drawParticles(cam) {
     const alpha = Math.max(0, Math.min(1, p.life / maxLife))
     if (p.color === 'blood') {
       ctx.fillStyle = `rgba(180, 30, 30, ${alpha})`
+    } else if (p.color === 'spark') {
+      ctx.fillStyle = `rgba(255, 220, 120, ${alpha})`
     } else if (p.color === 'ice') {
       ctx.fillStyle = `rgba(120, 200, 255, ${alpha})`
     } else {

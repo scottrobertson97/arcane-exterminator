@@ -44,10 +44,36 @@ export function drawSolarOrbits(cam) {
 
 export function drawBullets(cam) {
   for (const bullet of entities.bullets) {
-    ctx.fillStyle = bullet.type === 'frost' ? '#7cc7ff' : '#ff7b3a'
+    ctx.fillStyle =
+      bullet.type === 'frost'
+        ? '#7cc7ff'
+        : bullet.type === 'starfall'
+          ? '#ffd677'
+          : '#ff7b3a'
     ctx.beginPath()
     ctx.arc(bullet.x - cam.x, bullet.y - cam.y, bullet.r, 0, Math.PI * 2)
     ctx.fill()
+  }
+}
+
+export function drawMines(cam) {
+  for (const mine of entities.mines) {
+    const armed = mine.armTimer <= 0
+    const alpha = armed ? 0.95 : 0.45
+    const pulse = 0.65 + 0.35 * Math.sin((mine.life / mine.maxLife) * Math.PI * 8)
+
+    ctx.fillStyle = `rgba(200, 90, 40, ${alpha})`
+    ctx.beginPath()
+    ctx.arc(mine.x - cam.x, mine.y - cam.y, mine.r, 0, Math.PI * 2)
+    ctx.fill()
+
+    ctx.strokeStyle = armed
+      ? `rgba(255, 180, 90, ${pulse})`
+      : 'rgba(255, 180, 90, 0.35)'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(mine.x - cam.x, mine.y - cam.y, mine.triggerRadius, 0, Math.PI * 2)
+    ctx.stroke()
   }
 }
 

@@ -59,6 +59,31 @@ export function fireFrostShards(dt) {
   timers.frost = 1 / player.frostFireRate
 }
 
+export function fireStarfall(dt) {
+  timers.starfall -= dt
+  if (timers.starfall > 0) return
+
+  const count = Math.max(1, Math.round(player.starfallCount))
+  const step = (Math.PI * 2) / count
+  const baseAngle = Math.random() * Math.PI * 2
+
+  for (let i = 0; i < count; i += 1) {
+    const angle = baseAngle + step * i
+    entities.bullets.push({
+      x: player.x,
+      y: player.y,
+      vx: Math.cos(angle) * player.starfallSpeed,
+      vy: Math.sin(angle) * player.starfallSpeed,
+      r: 4,
+      damage: player.starfallDamage,
+      life: player.starfallLife,
+      type: 'starfall',
+    })
+  }
+
+  timers.starfall = player.starfallCooldown
+}
+
 export function updateBullets(dt) {
   for (let i = entities.bullets.length - 1; i >= 0; i -= 1) {
     const bullet = entities.bullets[i]
@@ -73,7 +98,12 @@ export function updateBullets(dt) {
       vy: (Math.random() - 0.5) * 40,
       r: 3 + Math.random() * 2,
       life: 0.35,
-      color: bullet.type === 'frost' ? 'ice' : 'fire',
+      color:
+        bullet.type === 'frost'
+          ? 'ice'
+          : bullet.type === 'starfall'
+            ? 'spark'
+            : 'fire',
     })
 
     let hit = false

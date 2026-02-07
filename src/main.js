@@ -16,8 +16,19 @@ import {
   setOpenStatUpgradeFromQueueHandler,
   showLevelUp,
 } from './systems/progression/upgradesMenu.js'
-import { fireFrostShards, shoot, updateBullets } from './systems/combat/projectiles.js'
-import { chainLightning, novaShockwave, pulseShockwave } from './systems/combat/abilities.js'
+import {
+  fireFrostShards,
+  fireStarfall,
+  shoot,
+  updateBullets,
+} from './systems/combat/projectiles.js'
+import {
+  castGravityWell,
+  chainLightning,
+  deployArcMines,
+  novaShockwave,
+  pulseShockwave,
+} from './systems/combat/abilities.js'
 import { updateOrbitCaches } from './systems/combat/orbitals.js'
 import { spawnEnemy, spawnMiniBoss } from './systems/world/spawning.js'
 import { updateEnemies } from './systems/world/enemies.js'
@@ -29,8 +40,11 @@ import {
 } from './systems/world/pickups.js'
 import {
   updateChainArcs,
+  updateMines,
   updateParticles,
   updatePulseEffects,
+  updateTrails,
+  updateVortexes,
 } from './systems/world/effects.js'
 import { bindInputHandlers } from './systems/input/controls.js'
 import { beginFrame, endWorldTransform } from './systems/render/frame.js'
@@ -40,6 +54,8 @@ import {
   drawParticles,
   drawPulseRings,
   drawShockLinks,
+  drawTrailPatches,
+  drawVortexRings,
   drawXpOrbs,
 } from './systems/render/effects.js'
 import {
@@ -47,6 +63,7 @@ import {
   drawBullets,
   drawEnemies,
   drawHealthPacks,
+  drawMines,
   drawPlayer,
   drawPlayerHpRing,
   drawRelics,
@@ -63,6 +80,8 @@ function updateTime(dt) {
 }
 
 function updatePlayerMovement(dt) {
+  const startX = player.x
+  const startY = player.y
   let moveX = (input.right ? 1 : 0) - (input.left ? 1 : 0)
   let moveY = (input.down ? 1 : 0) - (input.up ? 1 : 0)
 
@@ -89,11 +108,15 @@ function updatePlayerMovement(dt) {
 
   player.x = clamp(player.x, player.r, WORLD_WIDTH - player.r)
   player.y = clamp(player.y, player.r, WORLD_HEIGHT - player.r)
+  player.isMoving = Math.hypot(player.x - startX, player.y - startY) > 0.5
 }
 
 function updateWeaponFiring(dt) {
   shoot(dt)
   if (player.frostUnlocked) fireFrostShards(dt)
+  if (player.starfallUnlocked) fireStarfall(dt)
+  if (player.mineUnlocked) deployArcMines(dt)
+  if (player.vortexUnlocked) castGravityWell(dt)
 
   if (player.pulseUnlocked) {
     timers.pulse -= dt
@@ -158,6 +181,9 @@ function update(dt) {
   updateEnemySpawner(dt)
   updateEnemies(dt)
   updateBullets(dt)
+  updateMines(dt)
+  updateTrails(dt)
+  updateVortexes(dt)
   updateParticles(dt)
   updateRelicCollisions(dt)
   updateHealthPackCollisions(dt)
@@ -173,10 +199,13 @@ function draw() {
   drawWorldBackground()
   drawWorldGrid(cam)
   drawXpOrbs(cam)
+  drawTrailPatches(cam)
+  drawVortexRings(cam)
   drawPulseRings(cam)
   drawChainArcLines(cam)
   drawBladeOrbits(cam)
   drawSolarOrbits(cam)
+  drawMines(cam)
   drawBullets(cam)
   drawParticles(cam)
   drawRelics(cam)
