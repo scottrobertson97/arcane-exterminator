@@ -1,4 +1,10 @@
 import {
+  BOSS_DAMAGE,
+  BOSS_HP_BASE,
+  BOSS_HP_WAVE_SCALE,
+  BOSS_RADIUS,
+  BOSS_SPEED_BASE,
+  BOSS_SPEED_WAVE_SCALE,
   ELITE_BASE_CHANCE,
   ELITE_FAST_SPEED_MULT,
   ELITE_MAX_CHANCE,
@@ -40,6 +46,15 @@ export function addRelic() {
     Math.min(WORLD_HEIGHT - margin, cam.y + Math.random() * cam.viewHeight),
   )
   entities.relics.push({ x, y, r: 10, wobble: Math.random() * Math.PI * 2 })
+}
+
+export function addRelicAt(x, y) {
+  entities.relics.push({
+    x: Math.max(40, Math.min(WORLD_WIDTH - 40, x)),
+    y: Math.max(40, Math.min(WORLD_HEIGHT - 40, y)),
+    r: 10,
+    wobble: Math.random() * Math.PI * 2,
+  })
 }
 
 export function spawnEnemy() {
@@ -102,6 +117,58 @@ export function spawnEnemy() {
     isElite,
     affix,
     elitePulse: Math.random() * Math.PI * 2,
+    vx: 0,
+    vy: 0,
+    knockX: 0,
+    knockY: 0,
+    shockTimer: 0,
+    bladeHitTimer: 0,
+    orbHitTimer: 0,
+  })
+}
+
+export function spawnMiniBoss(wave) {
+  const edge = Math.floor(Math.random() * 4)
+  const margin = 140
+  const cam = camera()
+  let x = 0
+  let y = 0
+
+  if (edge === 0) {
+    x = cam.x - margin
+    y = cam.y + Math.random() * cam.viewHeight
+  } else if (edge === 1) {
+    x = cam.x + cam.viewWidth + margin
+    y = cam.y + Math.random() * cam.viewHeight
+  } else if (edge === 2) {
+    x = cam.x + Math.random() * cam.viewWidth
+    y = cam.y - margin
+  } else {
+    x = cam.x + Math.random() * cam.viewWidth
+    y = cam.y + cam.viewHeight + margin
+  }
+
+  x = Math.max(0, Math.min(WORLD_WIDTH, x))
+  y = Math.max(0, Math.min(WORLD_HEIGHT, y))
+
+  const hp = Math.round(BOSS_HP_BASE + wave * BOSS_HP_WAVE_SCALE)
+  const speed = BOSS_SPEED_BASE + wave * BOSS_SPEED_WAVE_SCALE
+
+  entities.enemies.push({
+    x,
+    y,
+    r: BOSS_RADIUS,
+    hp,
+    maxHp: hp,
+    speed,
+    damage: BOSS_DAMAGE,
+    tier: 2,
+    isElite: false,
+    affix: null,
+    elitePulse: 0,
+    isBoss: true,
+    bossWave: wave,
+    bossPulse: Math.random() * Math.PI * 2,
     vx: 0,
     vy: 0,
     knockX: 0,

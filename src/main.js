@@ -1,4 +1,4 @@
-import { WORLD_HEIGHT, WORLD_WIDTH } from './config/constants.js'
+import { BOSS_WAVE_INTERVAL, WORLD_HEIGHT, WORLD_WIDTH } from './config/constants.js'
 import { instructions, levelup, startBtn, zoomControls } from './core/dom.js'
 import { music } from './core/assets.js'
 import { camera, resizeCanvas, setZoomIndex } from './core/camera.js'
@@ -19,7 +19,7 @@ import {
 import { fireFrostShards, shoot, updateBullets } from './systems/combat/projectiles.js'
 import { chainLightning, novaShockwave, pulseShockwave } from './systems/combat/abilities.js'
 import { updateOrbitCaches } from './systems/combat/orbitals.js'
-import { spawnEnemy } from './systems/world/spawning.js'
+import { spawnEnemy, spawnMiniBoss } from './systems/world/spawning.js'
 import { updateEnemies } from './systems/world/enemies.js'
 import {
   updateHealthPackCollisions,
@@ -124,6 +124,12 @@ function updateEnemySpawner(dt) {
   timers.spawn -= dt
   const wave = Math.floor(state.elapsed / state.waveDuration) + 1
   const spawnInterval = Math.max(0.18, 1.2 - wave * 0.06)
+
+  while (wave >= state.nextBossWave) {
+    spawnMiniBoss(state.nextBossWave)
+    state.nextBossWave += BOSS_WAVE_INTERVAL
+  }
+
   if (timers.spawn <= 0) {
     spawnEnemy()
     timers.spawn = spawnInterval

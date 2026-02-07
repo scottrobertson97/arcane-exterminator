@@ -75,6 +75,7 @@
   - `spawnEnemy()` places enemies near camera-edge margins.
   - Wave scales by elapsed time (`state.waveDuration`), affecting tier, HP, speed, spawn rate.
   - Elite spawn chance scales by wave and caps at a max chance.
+  - Mini-boss spawns every fixed wave interval (`state.nextBossWave` scheduler).
 - Movement:
   - Seek player + separation flocking (`ENEMY_SEP_RADIUS`, `ENEMY_SEP_FORCE`).
   - Steering interpolation via velocity smoothing.
@@ -82,6 +83,7 @@
   - Shock debuff slows movement and drives electric VFX.
   - Leech elites heal when damaging the player.
   - Volatile elites explode on death and can damage the player in radius.
+  - Mini-bosses have larger hit radius/stats and guaranteed relic drop on death.
 
 ## Rendering Pipeline
 - `draw()` order:
@@ -103,6 +105,9 @@
 - Elite enemies:
   - `ELITE_BASE_CHANCE`, `ELITE_WAVE_BONUS`, `ELITE_MAX_CHANCE`.
   - Affix tunables: fast speed multiplier, tank HP multiplier, leech heal factor, volatile radius/damage.
+- Mini-boss:
+  - `BOSS_WAVE_INTERVAL`, `BOSS_HP_BASE`, `BOSS_HP_WAVE_SCALE`.
+  - `BOSS_SPEED_BASE`, `BOSS_SPEED_WAVE_SCALE`, `BOSS_RADIUS`, `BOSS_DAMAGE`, `BOSS_XP_REWARD`.
 - Player baselines in `player` object:
   - Core combat: `damage`, `fireRate`, `bulletSpeed`.
   - Defensive/mobility: `maxHp`, `speed`, `pickupRadius`.
@@ -142,6 +147,7 @@
 - Zoom in/out controls and camera clamping at world edges.
 - Enemy spawn pacing across early waves.
 - Elite enemy affix behaviors (`fast`, `tank`, `volatile`, `leech`) and readability.
+- Mini-boss appears on expected wave thresholds and always drops a relic on death.
 - XP pickup, level-up menu, repeated queued level choices.
 - Relic spawn/pickup, stat menu, queued relic choices.
 - Unlock/upgrade behavior for pulse, blades, frost, nova, chain, and solar orbs.

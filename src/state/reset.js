@@ -1,4 +1,4 @@
-import { WORLD_WIDTH, WORLD_HEIGHT } from '../config/constants.js'
+import { BOSS_WAVE_INTERVAL, WORLD_WIDTH, WORLD_HEIGHT } from '../config/constants.js'
 import { applyZoom } from '../core/camera.js'
 import { zoomState, player, entities, orbitCache, state, timers } from './gameState.js'
 
@@ -67,6 +67,7 @@ export function resetGame() {
   orbitCache.solars.length = 0
 
   state.elapsed = 0
+  state.nextBossWave = BOSS_WAVE_INTERVAL
   state.pendingLevels = 0
   state.pendingStatUps = 0
 

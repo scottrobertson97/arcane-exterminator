@@ -14,6 +14,7 @@ export const state = {
   lastTime: 0,
   elapsed: 0,
   waveDuration: 30,
+  nextBossWave: 5,
   pendingLevels: 0,
   pendingStatUps: 0,
 }

@@ -16,3 +16,12 @@ export const ELITE_LEECH_HEAL_FACTOR = 0.35
 export const ELITE_VOLATILE_RADIUS = 76
 export const ELITE_VOLATILE_DAMAGE = 20
 export const ELITE_XP_BONUS = 6
+
+export const BOSS_WAVE_INTERVAL = 5
+export const BOSS_HP_BASE = 260
+export const BOSS_HP_WAVE_SCALE = 28
+export const BOSS_SPEED_BASE = 58
+export const BOSS_SPEED_WAVE_SCALE = 2
+export const BOSS_RADIUS = 24
+export const BOSS_DAMAGE = 28
+export const BOSS_XP_REWARD = 28

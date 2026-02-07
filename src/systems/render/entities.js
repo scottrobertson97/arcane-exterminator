@@ -116,6 +116,15 @@ export function drawHealthPacks(cam) {
 export function drawEnemies(cam) {
   for (const enemy of entities.enemies) {
     const sprite = enemy.tier === 2 ? enemyBigSprite : enemySmallSprite
+    if (enemy.isBoss) {
+      const pulse = 0.45 + 0.35 * Math.sin(enemy.bossPulse || 0)
+      ctx.strokeStyle = `rgba(255, 220, 120, ${pulse})`
+      ctx.lineWidth = 4
+      ctx.beginPath()
+      ctx.arc(enemy.x - cam.x, enemy.y - cam.y, enemy.r + 11, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+
     if (enemy.isElite) {
       const pulse = 0.35 + 0.25 * Math.sin(enemy.elitePulse || 0)
       const affixColor =
@@ -163,6 +172,15 @@ export function drawEnemies(cam) {
         size,
         size,
       )
+      if (enemy.isBoss) {
+        ctx.strokeStyle = 'rgba(255, 236, 170, 0.9)'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(enemy.x - cam.x - 8, enemy.y - cam.y - enemy.r - 8)
+        ctx.lineTo(enemy.x - cam.x, enemy.y - cam.y - enemy.r - 16)
+        ctx.lineTo(enemy.x - cam.x + 8, enemy.y - cam.y - enemy.r - 8)
+        ctx.stroke()
+      }
     } else {
       ctx.fillStyle = enemy.tier === 2 ? '#5a1f1f' : '#1f1f1f'
       ctx.beginPath()

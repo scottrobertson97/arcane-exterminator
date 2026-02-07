@@ -1,4 +1,5 @@
 import {
+  BOSS_XP_REWARD,
   ELITE_LEECH_HEAL_FACTOR,
   ELITE_VOLATILE_DAMAGE,
   ELITE_VOLATILE_RADIUS,
@@ -7,7 +8,7 @@ import {
   ENEMY_SEP_RADIUS,
 } from '../../config/constants.js'
 import { entities, orbitCache, player } from '../../state/gameState.js'
-import { addOrb } from './spawning.js'
+import { addOrb, addRelicAt } from './spawning.js'
 
 export function updateEnemies(dt) {
   for (let i = entities.enemies.length - 1; i >= 0; i -= 1) {
@@ -34,6 +35,7 @@ export function updateEnemies(dt) {
     if (enemy.bladeHitTimer > 0) enemy.bladeHitTimer -= dt
     if (enemy.orbHitTimer > 0) enemy.orbHitTimer -= dt
     if (enemy.isElite) enemy.elitePulse += dt * 6
+    if (enemy.isBoss) enemy.bossPulse += dt * 4
     const slow = enemy.shockTimer > 0 ? 0.55 : 1
     const seekVX = (dx / dist) * enemy.speed * slow
     const seekVY = (dy / dist) * enemy.speed * slow
@@ -89,9 +91,14 @@ export function updateEnemies(dt) {
 
     if (enemy.hp <= 0) {
       entities.enemies.splice(i, 1)
-      const orbValue =
-        (enemy.tier === 2 ? 12 : 8) + (enemy.isElite ? ELITE_XP_BONUS : 0)
+      const orbValue = enemy.isBoss
+        ? BOSS_XP_REWARD
+        : (enemy.tier === 2 ? 12 : 8) + (enemy.isElite ? ELITE_XP_BONUS : 0)
       addOrb(enemy.x, enemy.y, orbValue)
+
+      if (enemy.isBoss) {
+        addRelicAt(enemy.x, enemy.y)
+      }
 
       if (enemy.affix === 'volatile') {
         entities.pulses.push({

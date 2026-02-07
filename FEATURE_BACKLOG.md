@@ -20,11 +20,15 @@ This backlog defines a staged rollout for future gameplay features.
 - Added elite visual rings by affix and volatile death pulse telegraph.
 - Added elite XP bonus on kill.
 
-2. Mini-Boss Every N Waves
+2. [x] Mini-Boss Every N Waves
 - Boss waves: 5, 10, 15...
 - Guaranteed relic drop on boss death.
 - Files: world spawning/enemies/render, relic drop flow.
 - Smoke checks: one boss per threshold, reward consistency, pacing impact.
+- Status notes:
+- Added boss wave scheduler using `state.nextBossWave`.
+- Added dedicated boss spawn path with larger stats/radius and visual telegraph.
+- Added guaranteed relic drop at boss death position and boss XP reward.
 
 3. Combo XP Bonus
 - Kill-streak timer grants temporary XP multiplier.
