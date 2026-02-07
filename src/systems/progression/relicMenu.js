@@ -46,11 +46,13 @@ export function showStatUpgrades(rarity = 'bronze') {
   const options = buildOptionsByRarity(rarity)
 
   for (const option of options) {
+    const description =
+      typeof option.desc === 'function' ? option.desc(rarity) : option.desc
     const btn = document.createElement('button')
     btn.className = 'choice-btn'
-    btn.innerHTML = `${option.name}<span>${option.desc} (${rarity})</span>`
+    btn.innerHTML = `${option.name}<span>${description}</span>`
     btn.addEventListener('click', () => {
-      option.apply()
+      option.apply(rarity)
       if (state.pendingStatUps > 0) {
         openStatUpgradeFromQueue()
       } else if (state.pendingLevels > 0) {

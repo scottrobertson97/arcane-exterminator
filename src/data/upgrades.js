@@ -1,4 +1,23 @@
 import { player } from '../state/gameState.js'
+import {
+  RELIC_BRONZE_STAT_MULT,
+  RELIC_GOLD_STAT_MULT,
+  RELIC_SILVER_STAT_MULT,
+} from '../config/constants.js'
+
+const relicStatMultipliers = {
+  bronze: RELIC_BRONZE_STAT_MULT,
+  silver: RELIC_SILVER_STAT_MULT,
+  gold: RELIC_GOLD_STAT_MULT,
+}
+
+function getRelicStatMultiplier(rarity = 'bronze') {
+  return relicStatMultipliers[rarity] || relicStatMultipliers.bronze
+}
+
+function formatPercent(value) {
+  return Number.isInteger(value) ? value : +value.toFixed(1)
+}
 
 export const upgradeDefs = [
   {
@@ -171,38 +190,58 @@ export const upgradeDefs = [
 export const statUpgrades = [
   {
     name: 'Heavy Rounds',
-    desc: '+25% bullet damage',
-    apply: () => {
-      player.damage = Math.round(player.damage * 1.25)
+    desc: (rarity = 'bronze') => {
+      const percent = formatPercent(25 * getRelicStatMultiplier(rarity))
+      return `+${percent}% bullet damage`
+    },
+    apply: (rarity = 'bronze') => {
+      const mult = getRelicStatMultiplier(rarity)
+      player.damage = Math.round(player.damage * (1 + 0.25 * mult))
     },
   },
   {
     name: 'Overclock',
-    desc: '+20% fire rate',
-    apply: () => {
-      player.fireRate = +(player.fireRate * 1.2).toFixed(2)
+    desc: (rarity = 'bronze') => {
+      const percent = formatPercent(20 * getRelicStatMultiplier(rarity))
+      return `+${percent}% fire rate`
+    },
+    apply: (rarity = 'bronze') => {
+      const mult = getRelicStatMultiplier(rarity)
+      player.fireRate = +(player.fireRate * (1 + 0.2 * mult)).toFixed(2)
     },
   },
   {
     name: 'Sprint Boots',
-    desc: '+15% move speed',
-    apply: () => {
-      player.speed = Math.round(player.speed * 1.15)
+    desc: (rarity = 'bronze') => {
+      const percent = formatPercent(15 * getRelicStatMultiplier(rarity))
+      return `+${percent}% move speed`
+    },
+    apply: (rarity = 'bronze') => {
+      const mult = getRelicStatMultiplier(rarity)
+      player.speed = Math.round(player.speed * (1 + 0.15 * mult))
     },
   },
   {
     name: 'Iron Heart',
-    desc: '+30 max HP',
-    apply: () => {
-      player.maxHp += 30
-      player.hp = Math.min(player.hp + 30, player.maxHp)
+    desc: (rarity = 'bronze') => {
+      const bonus = Math.round(30 * getRelicStatMultiplier(rarity))
+      return `+${bonus} max HP`
+    },
+    apply: (rarity = 'bronze') => {
+      const bonus = Math.round(30 * getRelicStatMultiplier(rarity))
+      player.maxHp += bonus
+      player.hp = Math.min(player.hp + bonus, player.maxHp)
     },
   },
   {
     name: 'Railcast',
-    desc: '+20% bullet speed',
-    apply: () => {
-      player.bulletSpeed = Math.round(player.bulletSpeed * 1.2)
+    desc: (rarity = 'bronze') => {
+      const percent = formatPercent(20 * getRelicStatMultiplier(rarity))
+      return `+${percent}% bullet speed`
+    },
+    apply: (rarity = 'bronze') => {
+      const mult = getRelicStatMultiplier(rarity)
+      player.bulletSpeed = Math.round(player.bulletSpeed * (1 + 0.2 * mult))
     },
   },
 ]

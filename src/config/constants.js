@@ -29,3 +29,7 @@ export const BOSS_XP_REWARD = 28
 export const RELIC_BRONZE_CHANCE = 0.6
 export const RELIC_SILVER_CHANCE = 0.3
 export const RELIC_GOLD_CHANCE = 0.1
+
+export const RELIC_BRONZE_STAT_MULT = 1
+export const RELIC_SILVER_STAT_MULT = 1.25
+export const RELIC_GOLD_STAT_MULT = 1.5
