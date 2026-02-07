@@ -54,6 +54,31 @@ export function drawBullets(cam) {
 export function drawRelics(cam) {
   for (const relic of entities.relics) {
     const pulse = 0.6 + 0.4 * Math.sin(relic.wobble)
+    const rarityColor =
+      relic.rarity === 'gold'
+        ? 'rgba(255, 221, 120, 0.95)'
+        : relic.rarity === 'silver'
+          ? 'rgba(200, 220, 255, 0.92)'
+          : 'rgba(198, 145, 92, 0.9)'
+    const fallbackFill =
+      relic.rarity === 'gold'
+        ? `rgba(255, 221, 120, ${pulse})`
+        : relic.rarity === 'silver'
+          ? `rgba(200, 220, 255, ${pulse})`
+          : `rgba(198, 145, 92, ${pulse})`
+    const glowRadius =
+      relic.rarity === 'gold'
+        ? relic.r + 8
+        : relic.rarity === 'silver'
+          ? relic.r + 6
+          : relic.r + 4
+
+    ctx.strokeStyle = rarityColor
+    ctx.lineWidth = relic.rarity === 'gold' ? 3 : 2
+    ctx.beginPath()
+    ctx.arc(relic.x - cam.x, relic.y - cam.y, glowRadius, 0, Math.PI * 2)
+    ctx.stroke()
+
     ctx.fillStyle = 'rgba(40, 40, 40, 0.25)'
     ctx.beginPath()
     ctx.ellipse(
@@ -69,6 +94,8 @@ export function drawRelics(cam) {
 
     if (relicSprite.complete && relicSprite.naturalWidth > 0) {
       const size = relic.r * 2
+      ctx.save()
+      ctx.globalAlpha = pulse
       ctx.drawImage(
         relicSprite,
         relic.x - cam.x - size / 2,
@@ -76,8 +103,9 @@ export function drawRelics(cam) {
         size,
         size,
       )
+      ctx.restore()
     } else {
-      ctx.fillStyle = `rgba(80, 170, 255, ${pulse})`
+      ctx.fillStyle = fallbackFill
       ctx.beginPath()
       ctx.moveTo(relic.x - cam.x, relic.y - cam.y - relic.r)
       ctx.lineTo(relic.x - cam.x + relic.r, relic.y - cam.y)

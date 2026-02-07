@@ -67,8 +67,9 @@
 - Progression flow:
   - Enemy death -> XP orb drop (+ health pack drop chance).
   - XP gain -> level queue (`state.pendingLevels`) -> `showLevelUp()`.
-  - Relic pickup -> stat queue (`state.pendingStatUps`) -> `showStatUpgrades()`.
+  - Relic pickup -> rarity-aware stat queue (`state.pendingStatUps`, `state.pendingRelicRarities`) -> `showStatUpgrades(rarity)`.
   - Queues chain correctly while paused (multiple level/relic rewards are handled in order).
+  - Relic rarities (`bronze`, `silver`, `gold`) influence relic VFX and stat-upgrade option quality.
 
 ## Enemy and Spawn Behavior
 - Spawning:
@@ -108,6 +109,8 @@
 - Mini-boss:
   - `BOSS_WAVE_INTERVAL`, `BOSS_HP_BASE`, `BOSS_HP_WAVE_SCALE`.
   - `BOSS_SPEED_BASE`, `BOSS_SPEED_WAVE_SCALE`, `BOSS_RADIUS`, `BOSS_DAMAGE`, `BOSS_XP_REWARD`.
+- Relic rarity:
+  - `RELIC_BRONZE_CHANCE`, `RELIC_SILVER_CHANCE`, `RELIC_GOLD_CHANCE`.
 - Player baselines in `player` object:
   - Core combat: `damage`, `fireRate`, `bulletSpeed`.
   - Defensive/mobility: `maxHp`, `speed`, `pickupRadius`.
@@ -148,6 +151,8 @@
 - Enemy spawn pacing across early waves.
 - Elite enemy affix behaviors (`fast`, `tank`, `volatile`, `leech`) and readability.
 - Mini-boss appears on expected wave thresholds and always drops a relic on death.
+- Relic rarity distribution and VFX readability (`bronze`/`silver`/`gold`).
+- Relic menu title/options reflect rarity and queue order remains stable.
 - XP pickup, level-up menu, repeated queued level choices.
 - Relic spawn/pickup, stat menu, queued relic choices.
 - Unlock/upgrade behavior for pulse, blades, frost, nova, chain, and solar orbs.

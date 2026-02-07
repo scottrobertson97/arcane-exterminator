@@ -20,6 +20,7 @@ export function updateRelicCollisions(dt) {
     if (dist < player.r + relic.r) {
       entities.relics.splice(i, 1)
       state.pendingStatUps += 1
+      state.pendingRelicRarities.push(relic.rarity || 'bronze')
       if (!state.paused) openStatUpgradeFromQueue()
     }
   }

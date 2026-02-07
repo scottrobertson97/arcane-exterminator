@@ -17,6 +17,7 @@ export const state = {
   nextBossWave: 5,
   pendingLevels: 0,
   pendingStatUps: 0,
+  pendingRelicRarities: [],
 }
 
 export const input = {

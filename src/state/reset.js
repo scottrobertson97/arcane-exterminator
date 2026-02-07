@@ -70,6 +70,7 @@ export function resetGame() {
   state.nextBossWave = BOSS_WAVE_INTERVAL
   state.pendingLevels = 0
   state.pendingStatUps = 0
+  state.pendingRelicRarities.length = 0
 
   timers.shoot = 0
   timers.spawn = 0

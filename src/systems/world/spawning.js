@@ -10,6 +10,9 @@ import {
   ELITE_MAX_CHANCE,
   ELITE_TANK_HP_MULT,
   ELITE_WAVE_BONUS,
+  RELIC_BRONZE_CHANCE,
+  RELIC_GOLD_CHANCE,
+  RELIC_SILVER_CHANCE,
   WORLD_WIDTH,
   WORLD_HEIGHT,
 } from '../../config/constants.js'
@@ -20,6 +23,14 @@ const eliteAffixes = ['fast', 'tank', 'volatile', 'leech']
 
 function randomEliteAffix() {
   return eliteAffixes[Math.floor(Math.random() * eliteAffixes.length)]
+}
+
+function rollRelicRarity() {
+  const total = RELIC_GOLD_CHANCE + RELIC_SILVER_CHANCE + RELIC_BRONZE_CHANCE
+  const roll = Math.random() * total
+  if (roll < RELIC_GOLD_CHANCE) return 'gold'
+  if (roll < RELIC_GOLD_CHANCE + RELIC_SILVER_CHANCE) return 'silver'
+  return 'bronze'
 }
 
 export function addOrb(x, y, value) {
@@ -45,15 +56,22 @@ export function addRelic() {
     margin,
     Math.min(WORLD_HEIGHT - margin, cam.y + Math.random() * cam.viewHeight),
   )
-  entities.relics.push({ x, y, r: 10, wobble: Math.random() * Math.PI * 2 })
+  entities.relics.push({
+    x,
+    y,
+    r: 10,
+    wobble: Math.random() * Math.PI * 2,
+    rarity: rollRelicRarity(),
+  })
 }
 
-export function addRelicAt(x, y) {
+export function addRelicAt(x, y, rarity = null) {
   entities.relics.push({
     x: Math.max(40, Math.min(WORLD_WIDTH - 40, x)),
     y: Math.max(40, Math.min(WORLD_HEIGHT - 40, y)),
     r: 10,
     wobble: Math.random() * Math.PI * 2,
+    rarity: rarity || rollRelicRarity(),
   })
 }
 

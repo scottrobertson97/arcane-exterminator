@@ -35,10 +35,15 @@ This backlog defines a staged rollout for future gameplay features.
 - Files: `src/systems/world/enemies.js`, `src/systems/progression/xp.js`, HUD.
 - Smoke checks: streak start/expire behavior, reset on restart, XP math integrity.
 
-4. Relic Rarity
+4. [x] Relic Rarity
 - Rarities: bronze/silver/gold with different value impact and VFX.
 - Files: pickups/render/progression menu messaging.
 - Smoke checks: rarity distribution, UI clarity, upgrade queue stability.
+- Status notes:
+- Added rarity roll at relic spawn (`bronze`/`silver`/`gold`).
+- Added rarity-aware relic queue handling for stat upgrade menus.
+- Added rarity-weighted stat option quality and rarity-labeled menu text.
+- Added rarity-specific relic visual rings/glow intensity.
 
 ### Mid-Scope
 5. Biome Zones
