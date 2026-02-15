@@ -28,6 +28,7 @@
         <div class="hud-label">XP</div>
         <div id="xp">0 / 20</div>
       </div>
+      <div id="meta-bonus">Perm: HP +0% SPD +0% DMG +0% ROF +0% XP +0%</div>
     </div>
 
     <canvas id="game" width="960" height="540"></canvas>
@@ -38,12 +39,59 @@
       <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
     </div>
 
-    <div id="instructions">
-      <div class="title">Wave Survivors</div>
-      <div>Move: WASD / Arrow keys</div>
-      <div>Survive waves. Auto-attack fires at nearest enemy.</div>
-      <div>Collect orbs for XP. Level up to pick upgrades.</div>
-      <button id="start">Start</button>
+    <div id="menu-overlay">
+      <div id="menu-title-panel" class="menu-panel">
+        <div class="title">Arcane Exterminator</div>
+        <div class="menu-copy">Survive escalating waves and stack absurd power.</div>
+        <div class="menu-actions">
+          <button id="menu-play" type="button">Play</button>
+          <button id="menu-meta" type="button">Meta Progression</button>
+          <button id="menu-controls" type="button">Controls</button>
+        </div>
+      </div>
+
+      <div id="menu-meta-panel" class="menu-panel hidden">
+        <div class="title">Meta Progression</div>
+        <div class="menu-copy">Spend shards for permanent bonuses (applies on next run).</div>
+        <div class="meta-shards-row">Shards: <span id="meta-shards">0</span></div>
+        <div id="meta-list"></div>
+        <div class="menu-actions">
+          <button id="meta-back" type="button">Back</button>
+          <button id="meta-reset" type="button">Reset Save</button>
+        </div>
+      </div>
+
+      <div id="menu-controls-panel" class="menu-panel hidden">
+        <div class="title">Controls</div>
+        <div class="menu-copy">Move: WASD / Arrow Keys</div>
+        <div class="menu-copy">Aim Move: Hold Mouse / Touch</div>
+        <div class="menu-copy">Fire: Auto-target nearest enemy</div>
+        <div class="menu-copy">Zoom: Use + / - buttons</div>
+        <div class="menu-copy">Back: Escape</div>
+        <div class="menu-actions">
+          <button id="controls-back" type="button">Back</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="run-summary" class="hidden">
+      <div class="panel">
+        <div class="title">Run Summary</div>
+        <div class="summary-grid">
+          <div class="summary-label">Wave</div>
+          <div id="summary-wave">1</div>
+          <div class="summary-label">Time</div>
+          <div id="summary-time">0:00</div>
+          <div class="summary-label">Shards Earned</div>
+          <div id="summary-shards">0</div>
+          <div class="summary-label">Total Shards</div>
+          <div id="summary-total">0</div>
+        </div>
+        <div class="menu-actions">
+          <button id="summary-play" type="button">Play Again</button>
+          <button id="summary-meta" type="button">Meta Progression</button>
+        </div>
+      </div>
     </div>
 
     <div id="levelup" class="hidden">
@@ -53,6 +101,15 @@
       </div>
     </div>
 
-    <script type="module" src="src/main.js"></script>
+    <script>
+      const appScript = document.createElement('script')
+      if (window.location.protocol === 'file:') {
+        appScript.src = 'game.js'
+      } else {
+        appScript.type = 'module'
+        appScript.src = 'src/main.js'
+      }
+      document.body.appendChild(appScript)
+    </script>
   </body>
 </html>

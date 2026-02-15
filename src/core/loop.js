@@ -11,14 +11,7 @@ export function configureLoop({ update, draw, updateHud }) {
 }
 
 export function loop(timestamp) {
-  if (!state.running) {
-    state.lastTime = timestamp
-    drawFn()
-    updateHudFn()
-    requestAnimationFrame(loop)
-    return
-  }
-
+  if (!state.lastTime) state.lastTime = timestamp
   const dt = Math.min(0.05, (timestamp - state.lastTime) / 1000)
   state.lastTime = timestamp
 

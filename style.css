@@ -34,6 +34,7 @@ body {
   letter-spacing: 0.08em;
   font-size: 12px;
   z-index: 3;
+  max-width: min(94vw, 540px);
 }
 
 .hud-block {
@@ -45,6 +46,14 @@ body {
 
 .hud-label {
   font-weight: 700;
+}
+
+#meta-bonus {
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(11, 12, 15, 0.2);
+  font-size: 11px;
+  letter-spacing: 0.07em;
 }
 
 #game {
@@ -95,50 +104,153 @@ body {
   font-weight: 700;
 }
 
-#instructions,
-#levelup {
+.hidden {
+  display: none !important;
+}
+
+#menu-overlay,
+#levelup,
+#run-summary {
   position: fixed;
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(11, 12, 15, 0.65);
+  background: rgba(11, 12, 15, 0.58);
   color: #fff;
   z-index: 5;
+  padding: 24px;
 }
 
-#instructions .title,
-#levelup .title {
+#menu-overlay,
+#run-summary {
+  z-index: 6;
+}
+
+#menu-overlay .title,
+#levelup .title,
+#run-summary .title {
   font-size: 28px;
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
 
-#instructions {
-  text-align: center;
-  gap: 8px;
+.menu-panel,
+#levelup .panel,
+#run-summary .panel {
+  background: #111;
+  border: 2px solid #fff;
   padding: 24px;
+  width: min(92vw, 580px);
 }
 
-#instructions button {
-  margin-top: 12px;
-  padding: 10px 18px;
+.menu-copy {
+  opacity: 0.85;
+  margin-bottom: 8px;
+}
+
+.menu-actions {
+  display: grid;
+  grid-auto-flow: column;
+  justify-content: start;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.menu-actions button,
+.choice-btn,
+.meta-buy,
+#meta-reset {
+  padding: 10px 14px;
   border: 2px solid #fff;
   background: transparent;
   color: #fff;
   cursor: pointer;
+  text-align: left;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
 }
 
-#levelup.hidden {
-  display: none;
+.menu-actions button:disabled,
+.meta-buy:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#meta-reset {
+  border-color: #f0a364;
+  color: #f0a364;
+}
+
+#meta-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  max-height: min(40vh, 340px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.meta-shards-row {
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+#meta-shards {
+  color: #f3c86e;
+  font-weight: 700;
+}
+
+.meta-row {
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  padding: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.meta-row-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.meta-name {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.meta-desc,
+.meta-cost {
+  opacity: 0.78;
+  font-size: 12px;
+}
+
+.meta-rank {
+  color: #f3c86e;
+}
+
+.meta-row.maxed .meta-name,
+.meta-row.maxed .meta-rank {
+  color: #80d6a7;
+}
+
+#run-summary .summary-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.summary-label {
+  opacity: 0.78;
 }
 
 #levelup .panel {
-  background: #111;
-  border: 2px solid #fff;
-  padding: 24px;
   min-width: min(90vw, 520px);
 }
 
@@ -149,14 +261,6 @@ body {
 }
 
 .choice-btn {
-  padding: 10px 14px;
-  border: 2px solid #fff;
-  background: transparent;
-  color: #fff;
-  cursor: pointer;
-  text-align: left;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   display: grid;
   gap: 4px;
 }
@@ -171,10 +275,58 @@ body {
 @media (max-width: 700px) {
   #hud {
     font-size: 10px;
+    top: 10px;
+    left: 10px;
+    padding: 8px 10px;
+  }
+
+  #meta-bonus {
+    font-size: 10px;
+    letter-spacing: 0.05em;
   }
 
   #game {
     width: 100vw;
     height: 100vh;
+  }
+
+  #zoom-controls {
+    right: 10px;
+    bottom: 10px;
+    font-size: 10px;
+    padding: 8px 10px;
+  }
+
+  #menu-overlay,
+  #levelup,
+  #run-summary {
+    padding: 12px;
+  }
+
+  .menu-panel,
+  #levelup .panel,
+  #run-summary .panel {
+    padding: 16px;
+    width: min(96vw, 580px);
+  }
+
+  .menu-actions {
+    grid-auto-flow: row;
+    justify-content: stretch;
+  }
+
+  .menu-actions button,
+  #meta-reset,
+  .meta-buy,
+  .choice-btn {
+    width: 100%;
+  }
+
+  .meta-row {
+    grid-template-columns: 1fr;
+  }
+
+  .meta-buy {
+    text-align: center;
   }
 }

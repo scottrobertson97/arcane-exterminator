@@ -1,12 +1,29 @@
 import { BOSS_WAVE_INTERVAL, WORLD_HEIGHT, WORLD_WIDTH } from './config/constants.js'
-import { instructions, levelup, startBtn, zoomControls } from './core/dom.js'
+import {
+  controlsBack,
+  ctx,
+  levelup,
+  menuButtons,
+  menuOverlay,
+  menuPanels,
+  metaPanel,
+  runSummary as runSummaryUi,
+  zoomControls,
+} from './core/dom.js'
 import { music } from './core/assets.js'
 import { camera, resizeCanvas, setZoomIndex } from './core/camera.js'
 import { configureLoop, loop } from './core/loop.js'
 import { clamp } from './core/utils.js'
-import { input, player, state, timers, zoomState } from './state/gameState.js'
+import {
+  input,
+  player,
+  state,
+  SCREEN_STATES,
+  timers,
+  zoomState,
+} from './state/gameState.js'
 import { resetGame } from './state/reset.js'
-import { updateHud } from './systems/ui/hud.js'
+import { formatTime, updateHud } from './systems/ui/hud.js'
 import { setShowLevelUpHandler as setXpShowLevelUpHandler } from './systems/progression/xp.js'
 import {
   openStatUpgradeFromQueue,
@@ -16,6 +33,21 @@ import {
   setOpenStatUpgradeFromQueueHandler,
   showLevelUp,
 } from './systems/progression/upgradesMenu.js'
+import {
+  META_RANK_CAP,
+  applyMetaBonuses,
+  awardRunShards,
+  buildMetaBonusText,
+  canPurchaseMetaRank,
+  describeMetaNode,
+  getMetaRank,
+  getNextMetaCost,
+  loadSave,
+  metaNodes,
+  purchaseMetaRank,
+  resetSaveProgress,
+  saveProgress,
+} from './systems/progression/metaProgression.js'
 import {
   fireFrostShards,
   fireStarfall,
@@ -74,6 +106,123 @@ import { drawMinimap } from './systems/render/minimap.js'
 setXpShowLevelUpHandler(showLevelUp)
 setRelicShowLevelUpHandler(showLevelUp)
 setOpenStatUpgradeFromQueueHandler(openStatUpgradeFromQueue)
+
+let saveData = loadSave()
+
+function refreshMetaBonusText() {
+  state.metaBonusText = buildMetaBonusText(saveData.metaRanks)
+}
+
+function setMenuPanel(panel) {
+  if (!menuPanels.title || !menuPanels.meta || !menuPanels.controls) return
+
+  menuPanels.title.classList.toggle('hidden', panel !== SCREEN_STATES.TITLE)
+  menuPanels.meta.classList.toggle('hidden', panel !== SCREEN_STATES.META)
+  menuPanels.controls.classList.toggle('hidden', panel !== SCREEN_STATES.CONTROLS)
+}
+
+function setScreen(screen) {
+  const prevScreen = state.screen
+  if (prevScreen === SCREEN_STATES.RUNNING && screen !== SCREEN_STATES.RUNNING) {
+    state.menuCamX = player.x
+    state.menuCamY = player.y
+  }
+
+  state.screen = screen
+  state.running = screen === SCREEN_STATES.RUNNING
+
+  if (!state.running) {
+    state.paused = false
+    input.mouseActive = false
+    levelup.classList.add('hidden')
+  }
+
+  const showMenuOverlay =
+    screen === SCREEN_STATES.TITLE ||
+    screen === SCREEN_STATES.META ||
+    screen === SCREEN_STATES.CONTROLS
+
+  if (menuOverlay) {
+    menuOverlay.classList.toggle('hidden', !showMenuOverlay)
+  }
+
+  if (runSummaryUi.overlay) {
+    runSummaryUi.overlay.classList.toggle('hidden', screen !== SCREEN_STATES.RUN_SUMMARY)
+  }
+
+  setMenuPanel(showMenuOverlay ? screen : null)
+}
+
+function renderMetaPanel() {
+  if (!metaPanel.list || !metaPanel.shards) return
+
+  metaPanel.shards.textContent = `${saveData.shards}`
+  metaPanel.list.innerHTML = ''
+
+  for (const node of metaNodes) {
+    const rank = getMetaRank(saveData, node.id)
+    const nextCost = getNextMetaCost(node, rank)
+    const row = document.createElement('div')
+    row.className = 'meta-row'
+    if (rank >= META_RANK_CAP) row.classList.add('maxed')
+
+    const body = document.createElement('div')
+    body.className = 'meta-row-main'
+
+    const name = document.createElement('div')
+    name.className = 'meta-name'
+    name.textContent = node.label
+
+    const rankEl = document.createElement('div')
+    rankEl.className = 'meta-rank'
+    rankEl.textContent = `Rank ${rank}/${META_RANK_CAP}`
+
+    const desc = document.createElement('div')
+    desc.className = 'meta-desc'
+    desc.textContent =
+      rank >= META_RANK_CAP ? 'Max rank reached' : describeMetaNode(node, rank)
+
+    const cost = document.createElement('div')
+    cost.className = 'meta-cost'
+    cost.textContent =
+      rank >= META_RANK_CAP ? 'Cost: MAX' : `Cost: ${nextCost} shards`
+
+    const buyBtn = document.createElement('button')
+    buyBtn.className = 'meta-buy'
+    buyBtn.textContent = rank >= META_RANK_CAP ? 'MAX' : `Buy (${nextCost})`
+    buyBtn.disabled =
+      rank >= META_RANK_CAP || !canPurchaseMetaRank(saveData, node.id)
+
+    buyBtn.addEventListener('click', () => {
+      if (!purchaseMetaRank(saveData, node.id)) return
+      saveData = saveProgress(saveData)
+      refreshMetaBonusText()
+      renderMetaPanel()
+    })
+
+    body.appendChild(name)
+    body.appendChild(rankEl)
+    body.appendChild(desc)
+    body.appendChild(cost)
+    row.appendChild(body)
+    row.appendChild(buyBtn)
+
+    metaPanel.list.appendChild(row)
+  }
+}
+
+function openTitleScreen() {
+  setScreen(SCREEN_STATES.TITLE)
+}
+
+function openMetaScreen() {
+  renderMetaPanel()
+  setScreen(SCREEN_STATES.META)
+}
+
+function openControlsScreen() {
+  setScreen(SCREEN_STATES.CONTROLS)
+}
 
 function updateTime(dt) {
   state.elapsed += dt
@@ -159,18 +308,59 @@ function updateEnemySpawner(dt) {
   }
 }
 
-function checkGameOver() {
-  if (player.hp > 0) return
+function showRunSummary() {
+  const wave = Math.floor(state.elapsed / state.waveDuration) + 1
+  const elapsedSeconds = Math.max(0, state.elapsed)
+  const earnedShards = awardRunShards(saveData, elapsedSeconds, wave)
+  saveData = saveProgress(saveData)
 
-  state.running = false
-  instructions.style.display = 'grid'
-  instructions.querySelector('.title').textContent = 'Game Over'
-  startBtn.textContent = 'Restart'
+  if (runSummaryUi.wave) runSummaryUi.wave.textContent = `${wave}`
+  if (runSummaryUi.time) runSummaryUi.time.textContent = formatTime(elapsedSeconds)
+  if (runSummaryUi.shards) runSummaryUi.shards.textContent = `${earnedShards}`
+  if (runSummaryUi.total) runSummaryUi.total.textContent = `${saveData.shards}`
+
+  state.paused = false
+  input.mouseActive = false
+  levelup.classList.add('hidden')
+  setScreen(SCREEN_STATES.RUN_SUMMARY)
+
   music.pause()
   music.currentTime = 0
 }
 
+function checkGameOver() {
+  if (player.hp > 0) return
+  showRunSummary()
+}
+
+function updateMenuCameraDrift(dt) {
+  const halfW = zoomState.viewWidth / 2
+  const halfH = zoomState.viewHeight / 2
+  const minX = halfW
+  const maxX = Math.max(minX, WORLD_WIDTH - halfW)
+  const minY = halfH
+  const maxY = Math.max(minY, WORLD_HEIGHT - halfH)
+
+  state.menuCamX += state.menuCamVX * dt
+  state.menuCamY += state.menuCamVY * dt
+
+  if (state.menuCamX <= minX || state.menuCamX >= maxX) {
+    state.menuCamX = clamp(state.menuCamX, minX, maxX)
+    state.menuCamVX *= -1
+  }
+
+  if (state.menuCamY <= minY || state.menuCamY >= maxY) {
+    state.menuCamY = clamp(state.menuCamY, minY, maxY)
+    state.menuCamVY *= -1
+  }
+}
+
 function update(dt) {
+  if (state.screen !== SCREEN_STATES.RUNNING) {
+    updateMenuCameraDrift(dt)
+    return
+  }
+
   if (state.paused) return
 
   updateTime(dt)
@@ -216,22 +406,54 @@ function draw() {
   drawPlayerHpRing(cam)
   endWorldTransform()
   drawMinimap()
+
+  if (state.screen !== SCREEN_STATES.RUNNING) {
+    ctx.fillStyle = 'rgba(11, 12, 15, 0.45)'
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  }
 }
 
-function startGame() {
-  instructions.style.display = 'none'
-  instructions.querySelector('.title').textContent = 'Wave Survivors'
-  startBtn.textContent = 'Start'
-  levelup.classList.add('hidden')
-  state.running = true
-  state.paused = false
+function startRun() {
   resetGame()
+  applyMetaBonuses(saveData.metaRanks)
+  state.paused = false
+  setScreen(SCREEN_STATES.RUNNING)
+  music.currentTime = 0
   music.play().catch(() => {})
+}
+
+function onEscapePressed() {
+  if (
+    state.screen === SCREEN_STATES.META ||
+    state.screen === SCREEN_STATES.CONTROLS ||
+    state.screen === SCREEN_STATES.RUN_SUMMARY
+  ) {
+    openTitleScreen()
+  }
+}
+
+function resetMetaSave() {
+  const confirmed = window.confirm(
+    'Reset all shards and permanent upgrades? This cannot be undone.',
+  )
+  if (!confirmed) return
+
+  saveData = resetSaveProgress()
+  refreshMetaBonusText()
+  renderMetaPanel()
 }
 
 bindInputHandlers()
 
-startBtn.addEventListener('click', startGame)
+if (menuButtons.play) menuButtons.play.addEventListener('click', startRun)
+if (menuButtons.meta) menuButtons.meta.addEventListener('click', openMetaScreen)
+if (menuButtons.controls)
+  menuButtons.controls.addEventListener('click', openControlsScreen)
+if (metaPanel.back) metaPanel.back.addEventListener('click', openTitleScreen)
+if (metaPanel.reset) metaPanel.reset.addEventListener('click', resetMetaSave)
+if (controlsBack) controlsBack.addEventListener('click', openTitleScreen)
+if (runSummaryUi.play) runSummaryUi.play.addEventListener('click', startRun)
+if (runSummaryUi.meta) runSummaryUi.meta.addEventListener('click', openMetaScreen)
 if (zoomControls.out) {
   zoomControls.out.addEventListener('click', () => setZoomIndex(zoomState.index - 1))
 }
@@ -239,8 +461,16 @@ if (zoomControls.in) {
   zoomControls.in.addEventListener('click', () => setZoomIndex(zoomState.index + 1))
 }
 
+window.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return
+  onEscapePressed()
+})
+
 window.addEventListener('resize', resizeCanvas)
 resizeCanvas()
+refreshMetaBonusText()
+renderMetaPanel()
+openTitleScreen()
 
 configureLoop({ update, draw, updateHud })
 requestAnimationFrame(loop)

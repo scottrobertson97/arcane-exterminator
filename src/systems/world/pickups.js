@@ -50,7 +50,11 @@ export function updateXpOrbs(dt) {
     const dist = Math.hypot(dx, dy) || 1
 
     if (dist < player.pickupRadius + orb.r) {
-      gainXp(orb.value)
+      const effectiveXp = Math.max(
+        1,
+        Math.round(orb.value * (player.xpGainMultiplier || 1)),
+      )
+      gainXp(effectiveXp)
       entities.orbs.splice(i, 1)
     } else if (getUpgradeLevel('magnet') > 0 && dist < player.pickupRadius * 3) {
       const pull = (1 - dist / (player.pickupRadius * 3)) * 160

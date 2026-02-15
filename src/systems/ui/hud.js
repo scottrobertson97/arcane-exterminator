@@ -14,4 +14,5 @@ export function updateHud() {
   hud.hp.textContent = `${Math.max(0, Math.round(player.hp))} / ${player.maxHp}`
   hud.level.textContent = player.level
   hud.xp.textContent = `${player.xp} / ${player.nextXp}`
+  if (hud.metaBonus) hud.metaBonus.textContent = state.metaBonusText
 }

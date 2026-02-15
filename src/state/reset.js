@@ -8,6 +8,7 @@ export function resetGame() {
 
   player.x = WORLD_WIDTH / 2
   player.y = WORLD_HEIGHT / 2
+  player.maxHp = 100
   player.hp = player.maxHp
   player.xp = 0
   player.level = 0
@@ -17,6 +18,7 @@ export function resetGame() {
   player.damage = 18
   player.fireRate = 1.2
   player.bulletSpeed = 420
+  player.xpGainMultiplier = 1
   player.pickupRadius = 30
   player.pulseCooldown = 4.5
   player.pulseRadius = 120
@@ -96,6 +98,7 @@ export function resetGame() {
   orbitCache.solars.length = 0
 
   state.elapsed = 0
+  state.paused = false
   state.nextBossWave = BOSS_WAVE_INTERVAL
   state.pendingLevels = 0
   state.pendingStatUps = 0

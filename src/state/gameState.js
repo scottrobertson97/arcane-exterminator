@@ -1,6 +1,14 @@
 import { canvas } from '../core/dom.js'
 import { WORLD_WIDTH, WORLD_HEIGHT, zoomLevels } from '../config/constants.js'
 
+export const SCREEN_STATES = Object.freeze({
+  TITLE: 'title',
+  META: 'meta',
+  CONTROLS: 'controls',
+  RUNNING: 'running',
+  RUN_SUMMARY: 'runSummary',
+})
+
 export const zoomState = {
   index: 1,
   zoom: zoomLevels[1],
@@ -9,6 +17,7 @@ export const zoomState = {
 }
 
 export const state = {
+  screen: SCREEN_STATES.TITLE,
   running: false,
   paused: false,
   lastTime: 0,
@@ -18,6 +27,11 @@ export const state = {
   pendingLevels: 0,
   pendingStatUps: 0,
   pendingRelicRarities: [],
+  menuCamX: WORLD_WIDTH / 2,
+  menuCamY: WORLD_HEIGHT / 2,
+  menuCamVX: 34,
+  menuCamVY: 24,
+  metaBonusText: 'Perm: HP +0% SPD +0% DMG +0% ROF +0% XP +0%',
 }
 
 export const input = {
@@ -41,6 +55,7 @@ export const player = {
   damage: 18,
   fireRate: 1.2,
   bulletSpeed: 420,
+  xpGainMultiplier: 1,
   xp: 0,
   level: 1,
   nextXp: 20,

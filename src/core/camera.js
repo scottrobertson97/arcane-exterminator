@@ -1,6 +1,6 @@
 import { zoomLevels, WORLD_WIDTH, WORLD_HEIGHT } from '../config/constants.js'
 import { canvas, zoomControls } from './dom.js'
-import { player, zoomState } from '../state/gameState.js'
+import { player, state, SCREEN_STATES, zoomState } from '../state/gameState.js'
 import { clamp } from './utils.js'
 
 export function applyZoom() {
@@ -27,7 +27,11 @@ export function resizeCanvas() {
 }
 
 export function camera() {
-  const x = clamp(player.x - zoomState.viewWidth / 2, 0, WORLD_WIDTH - zoomState.viewWidth)
-  const y = clamp(player.y - zoomState.viewHeight / 2, 0, WORLD_HEIGHT - zoomState.viewHeight)
+  const focusX =
+    state.screen === SCREEN_STATES.RUNNING ? player.x : state.menuCamX
+  const focusY =
+    state.screen === SCREEN_STATES.RUNNING ? player.y : state.menuCamY
+  const x = clamp(focusX - zoomState.viewWidth / 2, 0, WORLD_WIDTH - zoomState.viewWidth)
+  const y = clamp(focusY - zoomState.viewHeight / 2, 0, WORLD_HEIGHT - zoomState.viewHeight)
   return { x, y, viewWidth: zoomState.viewWidth, viewHeight: zoomState.viewHeight }
 }
