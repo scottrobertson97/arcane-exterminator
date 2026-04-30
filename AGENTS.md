@@ -2,7 +2,7 @@
 
 ## Project Overview
 - Single-page browser game (HTML5 canvas) in the Vampire Survivors style.
-- No build tooling or framework; runs as native ES modules in the browser.
+- No framework. Runtime supports both native ES modules (served via HTTP) and a bundled fallback for `file://` launch.
 - Core files:
   - `index.html`: HUD, overlays, canvas, zoom controls.
   - `style.css`: layout/theme/overlay/button styles.
@@ -36,7 +36,7 @@
   - Wires cross-system callbacks, owns `update()`/`draw()` orchestrator order, bootstraps listeners, and starts the loop.
 
 ## UI and Input Systems
-- HUD fields: wave/time/hp/level/xp.
+- HUD fields: wave/time/hp/level/xp/combo.
 - Overlays:
   - `#instructions`: start screen + game over reuse.
   - `#levelup`: shared panel for level-up and relic stat selection.
@@ -65,7 +65,7 @@
 - Relic stat upgrades (`statUpgrades`):
   - Heavy Rounds, Overclock, Sprint Boots, Iron Heart, Railcast.
 - Progression flow:
-  - Enemy death -> XP orb drop (+ health pack drop chance).
+  - Enemy death -> combo kill-streak refresh + XP orb drop (+ health pack drop chance).
   - XP gain -> level queue (`state.pendingLevels`) -> `showLevelUp()`.
   - Relic pickup -> rarity-aware stat queue (`state.pendingStatUps`, `state.pendingRelicRarities`) -> `showStatUpgrades(rarity)`.
   - Queues chain correctly while paused (multiple level/relic rewards are handled in order).
@@ -109,6 +109,9 @@
 - Mini-boss:
   - `BOSS_WAVE_INTERVAL`, `BOSS_HP_BASE`, `BOSS_HP_WAVE_SCALE`.
   - `BOSS_SPEED_BASE`, `BOSS_SPEED_WAVE_SCALE`, `BOSS_RADIUS`, `BOSS_DAMAGE`, `BOSS_XP_REWARD`.
+- Combo XP:
+  - `COMBO_TIMEOUT`, `COMBO_KILLS_PER_STEP`.
+  - `COMBO_XP_BONUS_PER_STEP`, `COMBO_XP_MAX_BONUS`.
 - Relic rarity:
   - `RELIC_BRONZE_CHANCE`, `RELIC_SILVER_CHANCE`, `RELIC_GOLD_CHANCE`.
 - Player baselines in `player` object:
@@ -138,7 +141,9 @@
 - Use `FEATURE_BACKLOG.md` for staged feature rollout planning (one feature per branch with parity gates).
 
 ## Runtime Notes
-- Because the project uses ES modules, opening `index.html` via `file://` may fail with CORS restrictions.
+- `index.html` auto-loads `game.js` for `file://` launches and `src/main.js` for HTTP(S) launches.
+- If you modify `src/` and run via `file://`, rebuild `game.js`:
+  - `npx --yes esbuild src/main.js --bundle --format=iife --platform=browser --target=es2020 --outfile=game.js`
 - Run through a local HTTP server for manual testing, for example:
   - `python3 -m http.server 5500`
   - open `http://localhost:5500/`
@@ -154,6 +159,7 @@
 - Relic rarity distribution and VFX readability (`bronze`/`silver`/`gold`).
 - Relic menu title/options reflect rarity and queue order remains stable.
 - XP pickup, level-up menu, repeated queued level choices.
+- Combo streak start/refresh/expire behavior, restart reset, and XP multiplier stacking correctness.
 - Relic spawn/pickup, stat menu, queued relic choices.
 - Unlock/upgrade behavior for pulse, blades, frost, nova, chain, and solar orbs.
 - Health pack drop/pickup and HP cap behavior.

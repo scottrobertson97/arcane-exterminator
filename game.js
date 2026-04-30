@@ -22,6 +22,10 @@
   var BOSS_RADIUS = 24;
   var BOSS_DAMAGE = 28;
   var BOSS_XP_REWARD = 28;
+  var COMBO_TIMEOUT = 4;
+  var COMBO_KILLS_PER_STEP = 2;
+  var COMBO_XP_BONUS_PER_STEP = 0.1;
+  var COMBO_XP_MAX_BONUS = 0.6;
   var RELIC_BRONZE_CHANCE = 0.6;
   var RELIC_SILVER_CHANCE = 0.3;
   var RELIC_GOLD_CHANCE = 0.1;
@@ -38,6 +42,7 @@
     hp: document.getElementById("hp"),
     level: document.getElementById("level"),
     xp: document.getElementById("xp"),
+    combo: document.getElementById("combo"),
     metaBonus: document.getElementById("meta-bonus")
   };
   var levelup = document.getElementById("levelup");
@@ -117,6 +122,9 @@
     pendingLevels: 0,
     pendingStatUps: 0,
     pendingRelicRarities: [],
+    comboKills: 0,
+    comboExpiresAt: 0,
+    comboXpMultiplier: 1,
     menuCamX: WORLD_WIDTH / 2,
     menuCamY: WORLD_HEIGHT / 2,
     menuCamVX: 34,
@@ -400,6 +408,9 @@
     state.pendingLevels = 0;
     state.pendingStatUps = 0;
     state.pendingRelicRarities.length = 0;
+    state.comboKills = 0;
+    state.comboExpiresAt = 0;
+    state.comboXpMultiplier = 1;
     timers.shoot = 0;
     timers.starfall = 0;
     timers.spawn = 0;
@@ -413,30 +424,54 @@
     timers.relic = 6;
   }
 
-  // src/systems/ui/hud.js
-  function formatTime(seconds) {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  }
-  function updateHud() {
-    const wave = Math.floor(state.elapsed / state.waveDuration) + 1;
-    hud.wave.textContent = wave;
-    hud.time.textContent = formatTime(state.elapsed);
-    hud.hp.textContent = `${Math.max(0, Math.round(player.hp))} / ${player.maxHp}`;
-    hud.level.textContent = player.level;
-    hud.xp.textContent = `${player.xp} / ${player.nextXp}`;
-    if (hud.metaBonus) hud.metaBonus.textContent = state.metaBonusText;
-  }
-
   // src/systems/progression/xp.js
   var showLevelUpHandler = () => {
   };
   function setShowLevelUpHandler(fn) {
     showLevelUpHandler = fn;
   }
-  function gainXp(amount) {
-    player.xp += amount;
+  function resetComboState() {
+    state.comboKills = 0;
+    state.comboExpiresAt = 0;
+    state.comboXpMultiplier = 1;
+  }
+  function syncComboState() {
+    if (state.comboKills === 0) {
+      state.comboXpMultiplier = 1;
+      return;
+    }
+    if (state.elapsed >= state.comboExpiresAt) {
+      resetComboState();
+    }
+  }
+  function updateComboMultiplier() {
+    const bonusSteps = Math.floor(state.comboKills / COMBO_KILLS_PER_STEP);
+    const bonus = Math.min(COMBO_XP_MAX_BONUS, bonusSteps * COMBO_XP_BONUS_PER_STEP);
+    state.comboXpMultiplier = +(1 + bonus).toFixed(2);
+  }
+  function registerComboKill() {
+    syncComboState();
+    state.comboKills += 1;
+    state.comboExpiresAt = state.elapsed + COMBO_TIMEOUT;
+    updateComboMultiplier();
+  }
+  function getComboSnapshot() {
+    syncComboState();
+    const remaining = Math.max(0, state.comboExpiresAt - state.elapsed);
+    return {
+      active: remaining > 0 && state.comboKills > 0,
+      kills: state.comboKills,
+      multiplier: state.comboXpMultiplier,
+      remaining
+    };
+  }
+  function getXpMultiplier() {
+    syncComboState();
+    return (player.xpGainMultiplier || 1) * state.comboXpMultiplier;
+  }
+  function gainXp(baseAmount) {
+    const effectiveXp = Math.max(1, Math.round(baseAmount * getXpMultiplier()));
+    player.xp += effectiveXp;
     while (player.xp >= player.nextXp) {
       player.xp -= player.nextXp;
       player.level += 1;
@@ -446,6 +481,7 @@
     if (state.pendingLevels > 0 && !state.paused) {
       showLevelUpHandler();
     }
+    return effectiveXp;
   }
   function getUpgradeLevel(id) {
     return player.upgrades[id] || 0;
@@ -456,6 +492,32 @@
     const next = current + 1;
     option.apply(next);
     player.upgrades[option.id] = next;
+  }
+
+  // src/systems/ui/hud.js
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
+  function formatComboText(combo) {
+    if (!combo.active) return "-";
+    return `K${combo.kills} x${combo.multiplier.toFixed(2)} ${combo.remaining.toFixed(1)}s`;
+  }
+  function updateHud() {
+    const wave = Math.floor(state.elapsed / state.waveDuration) + 1;
+    const combo = getComboSnapshot();
+    hud.wave.textContent = wave;
+    hud.time.textContent = formatTime(state.elapsed);
+    hud.hp.textContent = `${Math.max(0, Math.round(player.hp))} / ${player.maxHp}`;
+    hud.level.textContent = player.level;
+    hud.xp.textContent = `${player.xp} / ${player.nextXp}`;
+    if (hud.combo) {
+      hud.combo.textContent = formatComboText(combo);
+      hud.combo.classList.toggle("combo-active", combo.active);
+      hud.combo.classList.toggle("combo-boost", combo.multiplier > 1);
+    }
+    if (hud.metaBonus) hud.metaBonus.textContent = state.metaBonusText;
   }
 
   // src/data/upgrades.js
@@ -1555,6 +1617,7 @@
       }
       if (enemy.hp <= 0) {
         entities.enemies.splice(i, 1);
+        registerComboKill();
         const orbValue = enemy.isBoss ? BOSS_XP_REWARD : (enemy.tier === 2 ? 12 : 8) + (enemy.isElite ? ELITE_XP_BONUS : 0);
         addOrb(enemy.x, enemy.y, orbValue);
         if (enemy.isBoss) {
@@ -1653,11 +1716,7 @@
       const dy = player.y - orb.y;
       const dist = Math.hypot(dx, dy) || 1;
       if (dist < player.pickupRadius + orb.r) {
-        const effectiveXp = Math.max(
-          1,
-          Math.round(orb.value * (player.xpGainMultiplier || 1))
-        );
-        gainXp(effectiveXp);
+        gainXp(orb.value);
         entities.orbs.splice(i, 1);
       } else if (getUpgradeLevel("magnet") > 0 && dist < player.pickupRadius * 3) {
         const pull = (1 - dist / (player.pickupRadius * 3)) * 160;

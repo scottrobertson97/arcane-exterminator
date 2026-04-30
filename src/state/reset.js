@@ -103,6 +103,9 @@ export function resetGame() {
   state.pendingLevels = 0
   state.pendingStatUps = 0
   state.pendingRelicRarities.length = 0
+  state.comboKills = 0
+  state.comboExpiresAt = 0
+  state.comboXpMultiplier = 1
 
   timers.shoot = 0
   timers.starfall = 0

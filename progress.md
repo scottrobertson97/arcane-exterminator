@@ -69,3 +69,29 @@ Original prompt: i want the relic rarity to effect how much it boots stats
   - `output/web-game/area-control-weapons-recheck/shot-1.png`
   - No `errors-*.json` produced (no Playwright-captured console/page errors).
 - Ran parse checks: `node --check` passed for all modified JS modules (`src/main.js`, state/combat/world/render/data files touched in this change).
+
+## 2026-02-16 (Combo XP Bonus)
+- New prompt: implement backlog item 3 (`Combo XP Bonus`) and update docs.
+- Added combo progression state:
+  - `state.comboKills`, `state.comboExpiresAt`, `state.comboXpMultiplier` in `src/state/gameState.js`.
+  - Reset wiring in `src/state/reset.js`.
+- Added combo XP system behavior in `src/systems/progression/xp.js`:
+  - `registerComboKill()` increments/refreshes kill-streak timer.
+  - Timeout-based expiry resets combo state.
+  - `gainXp()` now centralizes XP math and applies both permanent (`xpGainMultiplier`) and combo multipliers.
+  - `getComboSnapshot()` exposes HUD-friendly active/kills/multiplier/remaining values.
+- Wired enemy death into combo streak updates in `src/systems/world/enemies.js`.
+- Updated orb pickup XP call in `src/systems/world/pickups.js` to pass base orb XP into centralized `gainXp()`.
+- Added combo HUD display and styling:
+  - `index.html` combo row (`#combo`).
+  - `src/core/dom.js` HUD reference.
+  - `src/systems/ui/hud.js` combo text/status updates.
+  - `style.css` active/boost combo styles.
+- Added combo tuning constants in `src/config/constants.js`:
+  - `COMBO_TIMEOUT`, `COMBO_KILLS_PER_STEP`, `COMBO_XP_BONUS_PER_STEP`, `COMBO_XP_MAX_BONUS`.
+- Documentation updates:
+  - Marked backlog item 3 complete with status notes in `FEATURE_BACKLOG.md`.
+  - Updated `AGENTS.md` sections for HUD fields, progression flow, tunables, and manual combo smoke checks.
+- Validation:
+  - Rebuilt bundle for `file://` mode: `npx --yes esbuild src/main.js --bundle --format=iife --platform=browser --target=es2020 --outfile=game.js`.
+  - Build succeeded with no parse errors.

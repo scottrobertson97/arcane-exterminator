@@ -9,6 +9,7 @@ import {
 } from '../../config/constants.js'
 import { entities, orbitCache, player } from '../../state/gameState.js'
 import { addOrb, addRelicAt } from './spawning.js'
+import { registerComboKill } from '../progression/xp.js'
 
 export function updateEnemies(dt) {
   for (let i = entities.enemies.length - 1; i >= 0; i -= 1) {
@@ -91,6 +92,7 @@ export function updateEnemies(dt) {
 
     if (enemy.hp <= 0) {
       entities.enemies.splice(i, 1)
+      registerComboKill()
       const orbValue = enemy.isBoss
         ? BOSS_XP_REWARD
         : (enemy.tier === 2 ? 12 : 8) + (enemy.isElite ? ELITE_XP_BONUS : 0)

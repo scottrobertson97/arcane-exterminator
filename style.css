@@ -48,6 +48,15 @@ body {
   font-weight: 700;
 }
 
+#combo.combo-active {
+  color: #f0a364;
+}
+
+#combo.combo-boost {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 #meta-bonus {
   margin-top: 2px;
   padding-top: 8px;

@@ -30,10 +30,15 @@ This backlog defines a staged rollout for future gameplay features.
 - Added dedicated boss spawn path with larger stats/radius and visual telegraph.
 - Added guaranteed relic drop at boss death position and boss XP reward.
 
-3. Combo XP Bonus
+3. [x] Combo XP Bonus
 - Kill-streak timer grants temporary XP multiplier.
 - Files: `src/systems/world/enemies.js`, `src/systems/progression/xp.js`, HUD.
 - Smoke checks: streak start/expire behavior, reset on restart, XP math integrity.
+- Status notes:
+- Added combo runtime state (`comboKills`, `comboExpiresAt`, `comboXpMultiplier`) with reset wiring.
+- Added kill-streak registration on enemy death and timeout-driven combo expiry.
+- Centralized XP multiplier math in `gainXp()` so permanent + combo multipliers stack consistently.
+- Added HUD combo readout (`K#`, multiplier, remaining timer) with active/boost styling.
 
 4. [x] Relic Rarity
 - Rarities: bronze/silver/gold with different value impact and VFX.

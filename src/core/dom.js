@@ -7,6 +7,7 @@ export const hud = {
   hp: document.getElementById('hp'),
   level: document.getElementById('level'),
   xp: document.getElementById('xp'),
+  combo: document.getElementById('combo'),
   metaBonus: document.getElementById('meta-bonus'),
 }
 
