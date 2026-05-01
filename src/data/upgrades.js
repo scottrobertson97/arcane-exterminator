@@ -11,6 +11,8 @@ const relicStatMultipliers = {
   gold: RELIC_GOLD_STAT_MULT,
 }
 
+const ORBITAL_PROJECTILE_SOFT_CAP = 32
+
 function getRelicStatMultiplier(rarity = 'bronze') {
   return relicStatMultipliers[rarity] || relicStatMultipliers.bronze
 }
@@ -44,6 +46,7 @@ export const upgradeDefs = [
   {
     id: 'blades',
     max: 4,
+    repeatable: true,
     name: 'Orbiting Blades',
     desc: lvl =>
       lvl === 0
@@ -52,7 +55,11 @@ export const upgradeDefs = [
           ? '+1 blade'
           : lvl === 2
             ? '+1 blade, +6 damage'
-            : '+0.4 orbit speed',
+            : lvl === 3
+              ? '+0.4 orbit speed'
+              : player.bladeCount < ORBITAL_PROJECTILE_SOFT_CAP
+                ? '+1 blade'
+                : '+3 blade damage',
     canShow: () => true,
     apply: lvl => {
       if (lvl === 1) {
@@ -65,6 +72,10 @@ export const upgradeDefs = [
         player.bladeDamage += 6
       } else if (lvl === 4) {
         player.bladeSpeed += 0.4
+      } else if (player.bladeCount < ORBITAL_PROJECTILE_SOFT_CAP) {
+        player.bladeCount += 1
+      } else {
+        player.bladeDamage += 3
       }
     },
   },
@@ -228,6 +239,7 @@ export const upgradeDefs = [
   {
     id: 'solar',
     max: 4,
+    repeatable: true,
     name: 'Solar Orbs',
     desc: lvl =>
       lvl === 0
@@ -236,13 +248,22 @@ export const upgradeDefs = [
           ? '+1 orb'
           : lvl === 2
             ? '+2 damage'
-            : '+0.4 orbit speed',
+            : lvl === 3
+              ? '+0.4 orbit speed'
+              : player.orbCount < ORBITAL_PROJECTILE_SOFT_CAP
+                ? '+1 orb'
+                : '+2 orb damage',
     canShow: () => true,
     apply: lvl => {
       if (lvl === 1) player.orbUnlocked = true
       if (lvl === 2) player.orbCount += 1
       if (lvl === 3) player.orbDamage += 2
       if (lvl === 4) player.orbSpeed += 0.4
+      if (lvl > 4 && player.orbCount < ORBITAL_PROJECTILE_SOFT_CAP) {
+        player.orbCount += 1
+      } else if (lvl > 4) {
+        player.orbDamage += 2
+      }
     },
   },
   {

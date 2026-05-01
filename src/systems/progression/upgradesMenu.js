@@ -1,7 +1,7 @@
 import { levelup, choicesEl } from '../../core/dom.js'
 import { state } from '../../state/gameState.js'
 import { upgradeDefs } from '../../data/upgrades.js'
-import { getUpgradeLevel, applyUpgrade } from './xp.js'
+import { getUpgradeLevel, applyUpgrade, canApplyUpgrade } from './xp.js'
 
 let openStatUpgradeFromQueueHandler = () => {}
 
@@ -16,7 +16,7 @@ export function showLevelUp() {
   choicesEl.innerHTML = ''
 
   const available = upgradeDefs.filter(
-    option => getUpgradeLevel(option.id) < option.max && option.canShow(),
+    option => canApplyUpgrade(option) && option.canShow(),
   )
 
   if (available.length === 0) {

@@ -79,9 +79,13 @@ export function getUpgradeLevel(id) {
   return player.upgrades[id] || 0
 }
 
+export function canApplyUpgrade(option) {
+  return option.repeatable || getUpgradeLevel(option.id) < option.max
+}
+
 export function applyUpgrade(option) {
   const current = getUpgradeLevel(option.id)
-  if (current >= option.max) return
+  if (!canApplyUpgrade(option)) return
   const next = current + 1
   option.apply(next)
   player.upgrades[option.id] = next

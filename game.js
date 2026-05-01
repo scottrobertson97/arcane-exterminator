@@ -486,9 +486,12 @@
   function getUpgradeLevel(id) {
     return player.upgrades[id] || 0;
   }
+  function canApplyUpgrade(option) {
+    return option.repeatable || getUpgradeLevel(option.id) < option.max;
+  }
   function applyUpgrade(option) {
     const current = getUpgradeLevel(option.id);
-    if (current >= option.max) return;
+    if (!canApplyUpgrade(option)) return;
     const next = current + 1;
     option.apply(next);
     player.upgrades[option.id] = next;
@@ -526,6 +529,7 @@
     silver: RELIC_SILVER_STAT_MULT,
     gold: RELIC_GOLD_STAT_MULT
   };
+  var ORBITAL_PROJECTILE_SOFT_CAP = 32;
   function getRelicStatMultiplier(rarity = "bronze") {
     return relicStatMultipliers[rarity] || relicStatMultipliers.bronze;
   }
@@ -552,8 +556,9 @@
     {
       id: "blades",
       max: 4,
+      repeatable: true,
       name: "Orbiting Blades",
-      desc: (lvl) => lvl === 0 ? "Unlocks orbiting blades" : lvl === 1 ? "+1 blade" : lvl === 2 ? "+1 blade, +6 damage" : "+0.4 orbit speed",
+      desc: (lvl) => lvl === 0 ? "Unlocks orbiting blades" : lvl === 1 ? "+1 blade" : lvl === 2 ? "+1 blade, +6 damage" : lvl === 3 ? "+0.4 orbit speed" : player.bladeCount < ORBITAL_PROJECTILE_SOFT_CAP ? "+1 blade" : "+3 blade damage",
       canShow: () => true,
       apply: (lvl) => {
         if (lvl === 1) {
@@ -566,6 +571,10 @@
           player.bladeDamage += 6;
         } else if (lvl === 4) {
           player.bladeSpeed += 0.4;
+        } else if (player.bladeCount < ORBITAL_PROJECTILE_SOFT_CAP) {
+          player.bladeCount += 1;
+        } else {
+          player.bladeDamage += 3;
         }
       }
     },
@@ -672,14 +681,20 @@
     {
       id: "solar",
       max: 4,
+      repeatable: true,
       name: "Solar Orbs",
-      desc: (lvl) => lvl === 0 ? "Unlocks solar orbs" : lvl === 1 ? "+1 orb" : lvl === 2 ? "+2 damage" : "+0.4 orbit speed",
+      desc: (lvl) => lvl === 0 ? "Unlocks solar orbs" : lvl === 1 ? "+1 orb" : lvl === 2 ? "+2 damage" : lvl === 3 ? "+0.4 orbit speed" : player.orbCount < ORBITAL_PROJECTILE_SOFT_CAP ? "+1 orb" : "+2 orb damage",
       canShow: () => true,
       apply: (lvl) => {
         if (lvl === 1) player.orbUnlocked = true;
         if (lvl === 2) player.orbCount += 1;
         if (lvl === 3) player.orbDamage += 2;
         if (lvl === 4) player.orbSpeed += 0.4;
+        if (lvl > 4 && player.orbCount < ORBITAL_PROJECTILE_SOFT_CAP) {
+          player.orbCount += 1;
+        } else if (lvl > 4) {
+          player.orbDamage += 2;
+        }
       }
     },
     {
@@ -834,7 +849,7 @@
     levelup.querySelector(".title").textContent = "Level Up";
     choicesEl.innerHTML = "";
     const available = upgradeDefs.filter(
-      (option) => getUpgradeLevel(option.id) < option.max && option.canShow()
+      (option) => canApplyUpgrade(option) && option.canShow()
     );
     if (available.length === 0) {
       if (state.pendingStatUps > 0) {
