@@ -6,12 +6,28 @@ import {
   ELITE_XP_BONUS,
   ENEMY_SEP_FORCE,
   ENEMY_SEP_RADIUS,
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
 } from '../../config/constants.js'
 import { entities, orbitCache, player } from '../../state/gameState.js'
 import { addOrb, addRelicAt } from './spawning.js'
 import { registerComboKill } from '../progression/xp.js'
+import { createQuadtree } from './quadtree.js'
+
+const enemyQuadtree = createQuadtree({
+  x: 0,
+  y: 0,
+  width: WORLD_WIDTH,
+  height: WORLD_HEIGHT,
+})
+const nearbyEnemies = []
 
 export function updateEnemies(dt) {
+  enemyQuadtree.clear()
+  for (const enemy of entities.enemies) {
+    enemyQuadtree.insert(enemy)
+  }
+
   for (let i = entities.enemies.length - 1; i >= 0; i -= 1) {
     const enemy = entities.enemies[i]
     const dx = player.x - enemy.x
@@ -20,8 +36,11 @@ export function updateEnemies(dt) {
 
     let sepX = 0
     let sepY = 0
-    for (const other of entities.enemies) {
+    nearbyEnemies.length = 0
+    enemyQuadtree.queryCircle(enemy.x, enemy.y, ENEMY_SEP_RADIUS, nearbyEnemies)
+    for (const other of nearbyEnemies) {
       if (other === enemy) continue
+      if (other.hp <= 0) continue
       const ox = enemy.x - other.x
       const oy = enemy.y - other.y
       const od = Math.hypot(ox, oy)
