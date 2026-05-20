@@ -1,6 +1,15 @@
 import { entities, player, timers } from '../../state/gameState.js'
 import { WORLD_HEIGHT, WORLD_WIDTH } from '../../config/constants.js'
 import { nearestEnemy } from './targeting.js'
+import { createQuadtree } from '../world/quadtree.js'
+
+const enemyHitQuadtree = createQuadtree({
+  x: 0,
+  y: 0,
+  width: WORLD_WIDTH,
+  height: WORLD_HEIGHT,
+})
+const bulletHitCandidates = []
 
 export function shoot(dt) {
   timers.shoot -= dt
@@ -85,6 +94,14 @@ export function fireStarfall(dt) {
 }
 
 export function updateBullets(dt) {
+  enemyHitQuadtree.clear()
+  let maxEnemyRadius = 0
+  for (const enemy of entities.enemies) {
+    if (enemy.hp <= 0) continue
+    enemyHitQuadtree.insert(enemy)
+    maxEnemyRadius = Math.max(maxEnemyRadius, enemy.r)
+  }
+
   for (let i = entities.bullets.length - 1; i >= 0; i -= 1) {
     const bullet = entities.bullets[i]
     bullet.x += bullet.vx * dt
@@ -107,7 +124,15 @@ export function updateBullets(dt) {
     })
 
     let hit = false
-    for (const enemy of entities.enemies) {
+    bulletHitCandidates.length = 0
+    enemyHitQuadtree.queryCircle(
+      bullet.x,
+      bullet.y,
+      bullet.r + maxEnemyRadius,
+      bulletHitCandidates,
+    )
+    for (const enemy of bulletHitCandidates) {
+      if (enemy.hp <= 0) continue
       const dx = enemy.x - bullet.x
       const dy = enemy.y - bullet.y
       if (Math.hypot(dx, dy) < enemy.r + bullet.r) {
