@@ -1,4 +1,5 @@
 import { levelup, choicesEl } from '../../core/dom.js'
+import { shuffledCopy } from '../../core/utils.js'
 import { state } from '../../state/gameState.js'
 import { statUpgrades } from '../../data/upgrades.js'
 
@@ -7,13 +8,6 @@ const rarityLabel = {
   bronze: 'Bronze Relic',
   silver: 'Silver Relic',
   gold: 'Golden Relic',
-}
-const qualityRank = {
-  'Heavy Rounds': 5,
-  Overclock: 4,
-  'Sprint Boots': 3,
-  'Iron Heart': 5,
-  Railcast: 2,
 }
 
 export function setShowLevelUpHandler(fn) {
@@ -28,13 +22,7 @@ export function openStatUpgradeFromQueue() {
 }
 
 function buildOptionsByRarity(rarity) {
-  const shuffled = statUpgrades.slice().sort(() => Math.random() - 0.5)
-  if (rarity === 'bronze') return shuffled.slice(0, 3)
-
-  const pool = rarity === 'gold' ? shuffled.slice(0, 5) : shuffled.slice(0, 4)
-  return pool
-    .sort((a, b) => (qualityRank[b.name] || 1) - (qualityRank[a.name] || 1))
-    .slice(0, 3)
+  return shuffledCopy(statUpgrades).slice(0, 3)
 }
 
 export function showStatUpgrades(rarity = 'bronze') {

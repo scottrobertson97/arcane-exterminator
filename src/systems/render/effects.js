@@ -19,7 +19,7 @@ export function drawXpOrbs(cam) {
     )
     ctx.fill()
 
-    ctx.fillStyle = '#1f6f8b'
+    ctx.fillStyle = orb.isOverflow ? '#c64b5f' : '#1f6f8b'
     ctx.beginPath()
     ctx.arc(orb.x - cam.x, orb.y - cam.y, orb.r, 0, Math.PI * 2)
     ctx.fill()
@@ -32,16 +32,26 @@ export function drawPulseRings(cam) {
     const color =
       pulse.type === 'nova'
         ? `rgba(190, 120, 255, ${alpha})`
+        : pulse.type === 'aegis'
+          ? `rgba(120, 240, 210, ${alpha})`
         : pulse.type === 'volatile'
           ? `rgba(255, 120, 70, ${alpha})`
           : pulse.type === 'mine'
             ? `rgba(255, 175, 90, ${alpha})`
             : pulse.type === 'vortex'
               ? `rgba(145, 175, 255, ${alpha})`
+              : pulse.type === 'singularity'
+                ? `rgba(225, 150, 255, ${alpha})`
               : `rgba(80, 170, 255, ${alpha})`
     ctx.strokeStyle = color
     ctx.lineWidth =
-      pulse.type === 'volatile' ? 5 : pulse.type === 'nova' ? 3 : pulse.type === 'mine' ? 4 : 4
+      pulse.type === 'volatile'
+        ? 5
+        : pulse.type === 'nova' || pulse.type === 'aegis'
+          ? 3
+          : pulse.type === 'mine'
+            ? 4
+            : 4
     ctx.beginPath()
     ctx.arc(pulse.x - cam.x, pulse.y - cam.y, pulse.r, 0, Math.PI * 2)
     ctx.stroke()
@@ -69,13 +79,18 @@ export function drawVortexRings(cam) {
   for (const vortex of entities.vortexes) {
     const life = Math.max(0, vortex.life / vortex.maxLife)
     const swirl = (1 - life) * Math.PI * 2
-    ctx.strokeStyle = `rgba(130, 170, 255, ${(0.3 + life * 0.35).toFixed(3)})`
+    const evolved = vortex.type === 'singularity'
+    ctx.strokeStyle = evolved
+      ? `rgba(220, 135, 255, ${(0.36 + life * 0.4).toFixed(3)})`
+      : `rgba(130, 170, 255, ${(0.3 + life * 0.35).toFixed(3)})`
     ctx.lineWidth = 3
     ctx.beginPath()
     ctx.arc(vortex.x - cam.x, vortex.y - cam.y, vortex.r, 0, Math.PI * 2)
     ctx.stroke()
 
-    ctx.strokeStyle = `rgba(170, 205, 255, ${(0.25 + life * 0.35).toFixed(3)})`
+    ctx.strokeStyle = evolved
+      ? `rgba(245, 195, 255, ${(0.3 + life * 0.4).toFixed(3)})`
+      : `rgba(170, 205, 255, ${(0.25 + life * 0.35).toFixed(3)})`
     ctx.lineWidth = 2
     ctx.beginPath()
     ctx.arc(vortex.x - cam.x, vortex.y - cam.y, vortex.r * (0.35 + 0.2 * Math.sin(swirl)), 0, Math.PI * 2)
@@ -86,8 +101,11 @@ export function drawVortexRings(cam) {
 export function drawChainArcLines(cam) {
   for (const arc of entities.chainArcs) {
     const alpha = Math.min(1, arc.life / 0.2)
-    ctx.strokeStyle = `rgba(120, 200, 255, ${alpha})`
-    ctx.lineWidth = 2
+    ctx.strokeStyle =
+      arc.type === 'tempest'
+        ? `rgba(255, 226, 120, ${alpha})`
+        : `rgba(120, 200, 255, ${alpha})`
+    ctx.lineWidth = arc.type === 'tempest' ? 3 : 2
     ctx.beginPath()
     ctx.moveTo(arc.x1 - cam.x, arc.y1 - cam.y)
     ctx.lineTo(arc.x2 - cam.x, arc.y2 - cam.y)
@@ -115,19 +133,30 @@ export function drawParticles(cam) {
 }
 
 export function drawShockLinks(cam) {
-  const shocked = entities.enemies.filter(enemy => enemy.shockTimer > 0)
+  const shocked = entities.enemies.filter(enemy => enemy.shockTimer > 0).slice(0, 64)
   if (shocked.length <= 1) return
 
   const pulse = 0.35 + 0.35 * Math.sin(state.elapsed * 8)
   ctx.strokeStyle = `rgba(80, 170, 255, ${pulse})`
   ctx.lineWidth = 2
 
-  for (let i = 0; i < shocked.length; i += 1) {
+  const linkCount = Math.min(48, shocked.length - 1)
+  for (let i = 0; i < linkCount; i += 1) {
+    const source = shocked[i]
+    let nearest = null
+    let nearestDistance = 180
     for (let j = i + 1; j < shocked.length; j += 1) {
-      ctx.beginPath()
-      ctx.moveTo(shocked[i].x - cam.x, shocked[i].y - cam.y)
-      ctx.lineTo(shocked[j].x - cam.x, shocked[j].y - cam.y)
-      ctx.stroke()
+      const target = shocked[j]
+      const distance = Math.hypot(target.x - source.x, target.y - source.y)
+      if (distance < nearestDistance) {
+        nearest = target
+        nearestDistance = distance
+      }
     }
+    if (!nearest) continue
+    ctx.beginPath()
+    ctx.moveTo(source.x - cam.x, source.y - cam.y)
+    ctx.lineTo(nearest.x - cam.x, nearest.y - cam.y)
+    ctx.stroke()
   }
 }

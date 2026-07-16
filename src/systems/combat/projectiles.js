@@ -2,6 +2,7 @@ import { entities, player, timers } from '../../state/gameState.js'
 import { WORLD_HEIGHT, WORLD_WIDTH } from '../../config/constants.js'
 import { nearestEnemy } from './targeting.js'
 import { createQuadtree } from '../world/quadtree.js'
+import { scaledCooldown, scaledDamage } from './scaling.js'
 
 const enemyHitQuadtree = createQuadtree({
   x: 0,
@@ -20,21 +21,28 @@ export function shoot(dt) {
   const dx = target.x - player.x
   const dy = target.y - player.y
   const dist = Math.hypot(dx, dy) || 1
-  const vx = (dx / dist) * player.bulletSpeed
-  const vy = (dy / dist) * player.bulletSpeed
+  const baseAngle = Math.atan2(dy, dx)
+  const evolved = Boolean(player.evolutions.inferno_salvo)
+  const shotCount = evolved ? 3 : 1
+  const spread = evolved ? 0.13 : 0
 
-  entities.bullets.push({
-    x: player.x,
-    y: player.y,
-    vx,
-    vy,
-    r: 4,
-    damage: player.damage,
-    life: 1.5,
-    type: 'fire',
-  })
+  for (let i = 0; i < shotCount; i += 1) {
+    const angle = baseAngle + (i - (shotCount - 1) / 2) * spread
+    entities.bullets.push({
+      x: player.x,
+      y: player.y,
+      vx: Math.cos(angle) * player.bulletSpeed,
+      vy: Math.sin(angle) * player.bulletSpeed,
+      r: evolved ? 5 : 4,
+      damage: scaledDamage(player.damage),
+      life: evolved ? 1.7 : 1.5,
+      type: evolved ? 'inferno' : 'fire',
+      pierce: evolved ? 2 : 1,
+      hitTargets: [],
+    })
+  }
 
-  timers.shoot = 1 / player.fireRate
+  timers.shoot = scaledCooldown(1 / player.fireRate)
 }
 
 export function fireFrostShards(dt) {
@@ -47,6 +55,7 @@ export function fireFrostShards(dt) {
   const dy = target.y - player.y
   const baseAngle = Math.atan2(dy, dx)
   const spread = 0.18
+  const evolved = Boolean(player.evolutions.glacial_crown)
   const count = Math.max(1, player.frostShots)
   const start = -((count - 1) * spread) / 2
 
@@ -58,14 +67,15 @@ export function fireFrostShards(dt) {
       vx: Math.cos(angle) * player.frostSpeed,
       vy: Math.sin(angle) * player.frostSpeed,
       r: 4,
-      damage: player.frostDamage,
+      damage: scaledDamage(player.frostDamage),
       life: 1.4,
-      type: 'frost',
+      type: evolved ? 'glacial' : 'frost',
       pierce: player.frostPierce,
+      hitTargets: [],
     })
   }
 
-  timers.frost = 1 / player.frostFireRate
+  timers.frost = scaledCooldown(1 / player.frostFireRate)
 }
 
 export function fireStarfall(dt) {
@@ -84,13 +94,15 @@ export function fireStarfall(dt) {
       vx: Math.cos(angle) * player.starfallSpeed,
       vy: Math.sin(angle) * player.starfallSpeed,
       r: 4,
-      damage: player.starfallDamage,
+      damage: scaledDamage(player.starfallDamage),
       life: player.starfallLife,
       type: 'starfall',
+      pierce: 1,
+      hitTargets: [],
     })
   }
 
-  timers.starfall = player.starfallCooldown
+  timers.starfall = scaledCooldown(player.starfallCooldown)
 }
 
 export function updateBullets(dt) {
@@ -116,7 +128,7 @@ export function updateBullets(dt) {
       r: 3 + Math.random() * 2,
       life: 0.35,
       color:
-        bullet.type === 'frost'
+        bullet.type === 'frost' || bullet.type === 'glacial'
           ? 'ice'
           : bullet.type === 'starfall'
             ? 'spark'
@@ -133,15 +145,20 @@ export function updateBullets(dt) {
     )
     for (const enemy of bulletHitCandidates) {
       if (enemy.hp <= 0) continue
+      if (bullet.hitTargets?.includes(enemy)) continue
       const dx = enemy.x - bullet.x
       const dy = enemy.y - bullet.y
       if (Math.hypot(dx, dy) < enemy.r + bullet.r) {
         enemy.hp -= bullet.damage
-        hit = true
-        if (bullet.type === 'frost') {
-          bullet.pierce -= 1
-          if (bullet.pierce > 0) hit = false
+        if (bullet.type === 'frost' || bullet.type === 'glacial') {
+          enemy.shockTimer = Math.max(
+            enemy.shockTimer,
+            bullet.type === 'glacial' ? 2.2 : 1.1,
+          )
         }
+        if (bullet.hitTargets) bullet.hitTargets.push(enemy)
+        bullet.pierce = Math.max(0, (bullet.pierce || 1) - 1)
+        hit = bullet.pierce <= 0
         break
       }
     }

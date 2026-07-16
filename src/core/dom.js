@@ -8,8 +8,19 @@ export const hud = {
   level: document.getElementById('level'),
   xp: document.getElementById('xp'),
   combo: document.getElementById('combo'),
+  kills: document.getElementById('kills'),
   metaBonus: document.getElementById('meta-bonus'),
 }
+
+export const loadout = {
+  panel: document.getElementById('loadout'),
+  weapons: document.getElementById('weapon-loadout'),
+  passives: document.getElementById('passive-loadout'),
+  weaponCount: document.getElementById('weapon-slot-count'),
+  passiveCount: document.getElementById('passive-slot-count'),
+}
+
+export const runNotice = document.getElementById('run-notice')
 
 export const levelup = document.getElementById('levelup')
 export const choicesEl = document.getElementById('choices')
@@ -27,6 +38,7 @@ export const menuButtons = {
 }
 export const metaPanel = {
   shards: document.getElementById('meta-shards'),
+  lifetime: document.getElementById('meta-lifetime'),
   list: document.getElementById('meta-list'),
   back: document.getElementById('meta-back'),
   reset: document.getElementById('meta-reset'),
@@ -35,8 +47,12 @@ export const controlsBack = document.getElementById('controls-back')
 
 export const runSummary = {
   overlay: document.getElementById('run-summary'),
+  result: document.getElementById('summary-result'),
   wave: document.getElementById('summary-wave'),
   time: document.getElementById('summary-time'),
+  level: document.getElementById('summary-level'),
+  kills: document.getElementById('summary-kills'),
+  evolutions: document.getElementById('summary-evolutions'),
   shards: document.getElementById('summary-shards'),
   total: document.getElementById('summary-total'),
   play: document.getElementById('summary-play'),

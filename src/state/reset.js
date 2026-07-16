@@ -1,4 +1,9 @@
-import { BOSS_WAVE_INTERVAL, WORLD_WIDTH, WORLD_HEIGHT } from '../config/constants.js'
+import {
+  BOSS_WAVE_INTERVAL,
+  RELIC_SPAWN_INTERVAL,
+  WORLD_WIDTH,
+  WORLD_HEIGHT,
+} from '../config/constants.js'
 import { applyZoom } from '../core/camera.js'
 import { zoomState, player, entities, orbitCache, state, timers } from './gameState.js'
 
@@ -11,7 +16,7 @@ export function resetGame() {
   player.maxHp = 100
   player.hp = player.maxHp
   player.xp = 0
-  player.level = 0
+  player.level = 1
   player.nextXp = 20
   player.speed = 180
   player.isMoving = false
@@ -19,6 +24,9 @@ export function resetGame() {
   player.fireRate = 1.2
   player.bulletSpeed = 420
   player.xpGainMultiplier = 1
+  player.mightMultiplier = 1
+  player.cooldownMultiplier = 1
+  player.recovery = 0
   player.pickupRadius = 30
   player.pulseCooldown = 4.5
   player.pulseRadius = 120
@@ -82,6 +90,7 @@ export function resetGame() {
   player.orbAngle = 0
   player.orbUnlocked = false
   player.upgrades = { bullets: 1 }
+  player.evolutions = {}
 
   entities.bullets.length = 0
   entities.enemies.length = 0
@@ -91,6 +100,7 @@ export function resetGame() {
   entities.vortexes.length = 0
   entities.relics.length = 0
   entities.healthPacks.length = 0
+  entities.stageItems.length = 0
   entities.pulses.length = 0
   entities.particles.length = 0
   entities.chainArcs.length = 0
@@ -98,6 +108,7 @@ export function resetGame() {
   orbitCache.solars.length = 0
 
   state.elapsed = 0
+  state.activeWave = 0
   state.paused = false
   state.nextBossWave = BOSS_WAVE_INTERVAL
   state.pendingLevels = 0
@@ -106,6 +117,14 @@ export function resetGame() {
   state.comboKills = 0
   state.comboExpiresAt = 0
   state.comboXpMultiplier = 1
+  state.kills = 0
+  state.bossesDefeated = 0
+  state.evolutionCount = 0
+  state.stageItemsCollected = 0
+  state.bonusShards = 0
+  state.runResult = null
+  state.noticeText = ''
+  state.noticeExpiresAt = 0
 
   timers.shoot = 0
   timers.starfall = 0
@@ -117,5 +136,5 @@ export function resetGame() {
   timers.nova = 0
   timers.frost = 0
   timers.chain = 0
-  timers.relic = 6
+  timers.relic = Math.min(45, RELIC_SPAWN_INTERVAL)
 }

@@ -3,6 +3,15 @@ export const zoomLevels = [1, 2, 4]
 export const WORLD_WIDTH = 2400
 export const WORLD_HEIGHT = 1600
 
+export const MAX_WEAPON_SLOTS = 6
+export const MAX_PASSIVE_SLOTS = 6
+export const STAGE_DURATION = 10 * 60
+export const STAGE_WAVE_COUNT = 20
+export const MAX_ENEMIES = 160
+export const MAX_XP_ORBS = 300
+export const EVOLUTION_START_WAVE = 10
+export const RELIC_SPAWN_INTERVAL = 75
+
 export const ENEMY_SEP_RADIUS = 42
 export const ENEMY_SEP_FORCE = 120
 

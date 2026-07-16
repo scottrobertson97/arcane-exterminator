@@ -32,10 +32,37 @@
         <div class="hud-label">Combo</div>
         <div id="combo">-</div>
       </div>
+      <div class="hud-block">
+        <div class="hud-label">Kills</div>
+        <div id="kills">0</div>
+      </div>
       <div id="meta-bonus">Perm: HP +0% SPD +0% DMG +0% ROF +0% XP +0%</div>
     </div>
 
     <canvas id="game" width="960" height="540"></canvas>
+
+    <aside id="loadout" class="hidden" aria-label="Current loadout">
+      <section class="loadout-section" aria-labelledby="weapon-loadout-title">
+        <div class="loadout-heading">
+          <span id="weapon-loadout-title">Weapons</span>
+          <span id="weapon-slot-count">0 / 6</span>
+        </div>
+        <div id="weapon-loadout" class="loadout-list">
+          <div class="loadout-empty">Empty</div>
+        </div>
+      </section>
+      <section class="loadout-section" aria-labelledby="passive-loadout-title">
+        <div class="loadout-heading">
+          <span id="passive-loadout-title">Passives</span>
+          <span id="passive-slot-count">0 / 6</span>
+        </div>
+        <div id="passive-loadout" class="loadout-list">
+          <div class="loadout-empty">Empty</div>
+        </div>
+      </section>
+    </aside>
+
+    <div id="run-notice" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <div id="zoom-controls" aria-label="Zoom controls">
       <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
@@ -46,7 +73,7 @@
     <div id="menu-overlay">
       <div id="menu-title-panel" class="menu-panel">
         <div class="title">Arcane Exterminator</div>
-        <div class="menu-copy">Survive escalating waves and stack absurd power.</div>
+        <div class="menu-copy">Survive 20 escalating waves, explore for stage relics, and evolve your arsenal.</div>
         <div class="menu-actions">
           <button id="menu-play" type="button">Play</button>
           <button id="menu-meta" type="button">Meta Progression</button>
@@ -58,6 +85,7 @@
         <div class="title">Meta Progression</div>
         <div class="menu-copy">Spend shards for permanent bonuses (applies on next run).</div>
         <div class="meta-shards-row">Shards: <span id="meta-shards">0</span></div>
+        <div id="meta-lifetime">Runs 0 • Clears 0 • Best Wave 0</div>
         <div id="meta-list"></div>
         <div class="menu-actions">
           <button id="meta-back" type="button">Back</button>
@@ -70,6 +98,8 @@
         <div class="menu-copy">Move: WASD / Arrow Keys</div>
         <div class="menu-copy">Aim Move: Hold Mouse / Touch</div>
         <div class="menu-copy">Fire: Auto-target nearest enemy</div>
+        <div class="menu-copy">Explore: Colored relics at the map corners grant passives</div>
+        <div class="menu-copy">Evolve: Max a weapon, own its paired passive, then open a late boss cache</div>
         <div class="menu-copy">Zoom: Use + / - buttons</div>
         <div class="menu-copy">Back: Escape</div>
         <div class="menu-actions">
@@ -82,10 +112,18 @@
       <div class="panel">
         <div class="title">Run Summary</div>
         <div class="summary-grid">
+          <div class="summary-label">Result</div>
+          <div id="summary-result">Defeated</div>
           <div class="summary-label">Wave</div>
           <div id="summary-wave">1</div>
           <div class="summary-label">Time</div>
           <div id="summary-time">0:00</div>
+          <div class="summary-label">Level</div>
+          <div id="summary-level">1</div>
+          <div class="summary-label">Kills</div>
+          <div id="summary-kills">0</div>
+          <div class="summary-label">Evolutions</div>
+          <div id="summary-evolutions">0</div>
           <div class="summary-label">Shards Earned</div>
           <div id="summary-shards">0</div>
           <div class="summary-label">Total Shards</div>
@@ -107,11 +145,12 @@
 
     <script>
       const appScript = document.createElement('script')
+      const scriptQuery = window.location.search
       if (window.location.protocol === 'file:') {
-        appScript.src = 'game.js'
+        appScript.src = `game.js${scriptQuery}`
       } else {
         appScript.type = 'module'
-        appScript.src = 'src/main.js'
+        appScript.src = `src/main.js${scriptQuery}`
       }
       document.body.appendChild(appScript)
     </script>

@@ -95,3 +95,50 @@ Original prompt: i want the relic rarity to effect how much it boots stats
 - Validation:
   - Rebuilt bundle for `file://` mode: `npx --yes esbuild src/main.js --bundle --format=iife --platform=browser --target=es2020 --outfile=game.js`.
   - Build succeeded with no parse errors.
+
+## 2026-07-16 (Survivor progression and bounded-stage expansion)
+- New prompt: research the progression structure of Vampire Survivors-style games, implement compatible mechanics with original presentation, and flesh out the existing run loop.
+- Added a bounded stage and wave director:
+  - Runs now clear after 20 thirty-second waves / 10 minutes instead of continuing indefinitely.
+  - Added `src/data/waves.js` with per-wave minimum population, spawn interval, tier mix, HP/speed modifiers, and one-time surge packs.
+  - Added wave/guardian notices and a standard/event enemy population cap of 160.
+  - Guardians remain scheduled for waves 5, 10, 15, and 20; reaching 600 seconds clears remaining enemies and opens the victory summary.
+- Added structured builds and passive progression:
+  - Classified upgrade definitions as `weapon` or `passive`.
+  - Level-up drafts enforce 6 owned weapon slots and 6 owned passive slots while continuing to offer ranks for already-owned lines.
+  - Added seven passives alongside Magnet Field: Ember Sigil (Might), Chronicle (Cooldown), Iron Ward (max HP), Kinetic Rune (projectile speed), Astral Lens (area), Windstep Boots (move speed), and Mending Charm (recovery).
+  - Added `src/systems/combat/scaling.js`; shared `scaledDamage()` and `scaledCooldown()` route in-run passives and permanent Power/Tempo bonuses across supported weapon families.
+- Added four fixed stage relics:
+  - Ember Sigil, Chronicle, Iron Ward, and Astral Lens spawn at fixed map positions and appear on the minimap.
+  - Collection directly grants a passive rank and intentionally bypasses the 6-passive draft cap.
+  - A fixed relic whose line is already maxed converts to 25 XP.
+- Added boss caches and six evolution recipes:
+  - Bronze/silver/gold caches apply 1/3/5 rewards, respectively, then present a single confirmation panel.
+  - Exhausted cache slots convert to Arcane Dust shards, and overlapping relic/cache pickups now hand off one modal at a time without losing a queued reward.
+  - Bosses spawned from wave 10 onward capture the evolution gate and carry it into the cache they drop.
+  - Evolution eligibility requires a maxed base weapon plus at least one rank of the paired passive; an evolution consumes one cache reward and is tracked once per run.
+  - Recipes: Firebolts + Ember Sigil -> Inferno Salvo; Frost Shards + Kinetic Rune -> Glacial Crown; Orbiting Blades + Astral Lens -> Blade Tempest; Arcane Nova + Iron Ward -> Star Aegis; Chain Lightning + Chronicle -> Tempest Lattice; Gravity Well + Magnet Field -> Singularity.
+  - Orbiting Blades and Solar Orbs now stop at their displayed maximum ranks, keeping max-build and evolution eligibility finite.
+- Added dense-run safeguards:
+  - XP gems coalesce into an overflow gem once 300 orb entities exist, preserving XP value while bounding entity count.
+  - Existing quadtree enemy-separation and bullet-collision optimizations remain active under the larger wave populations.
+  - Replaced biased random-sort selection with shared Fisher-Yates `shuffledCopy()` sampling for level, relic, and cache rewards.
+- Expanded UI and run reporting:
+  - Fixed new runs to display level 1 rather than level 0.
+  - Added kill count, compact weapon/passive loadouts with 6/6 slot counts, evolved-weapon stars, and an accessible live notice region.
+  - Run summary now reports victory/defeat result, wave, time, level, kills, evolutions, and shard totals.
+  - Mobile layout rules keep the loadout and longer summary panels bounded and scrollable.
+- Updated persistent progression:
+  - Save schema v2 adds sanitized lifetime victory tracking and canonical migration for older saves.
+  - Victories increment lifetime clears, award a clear shard bonus, and appear in the meta panel.
+  - Meta Progression was already implemented but incorrectly remained listed as a future backlog item; documentation now marks it complete.
+- Added guarded deterministic verification support:
+  - `?test=1` installs `window.__arcaneTest`, `window.render_game_to_text`, a live snapshot, and controls for run start, upgrade/evolution setup, boss/cache setup, stage-item collection, HP/time changes, and victory jumps.
+  - Normal URLs do not install the test globals or controls.
+- Documentation and backlog hygiene:
+  - Updated `AGENTS.md` for the new data modules, progression contracts, tunables, UI, save schema, runtime hooks, and manual test checklist.
+  - Updated `FEATURE_BACKLOG.md` to record the completed survivor-progression slice.
+  - Marked the level-0 display bug, enemy-separation optimization, random-sort replacement, and stale Meta Progression backlog entry complete.
+- Final validation:
+  - Parsed all 37 source modules and the rebuilt `game.js` fallback with `node --check`; `git diff --check` passed.
+  - Browser scenarios verified normal/test URL gating, level-up metadata, a 38-enemy late-wave horde, a three-reward silver evolution cache, evolved three-shot fire, the 10-minute victory summary, cleared hostile entities, and persistent lifetime stats.

@@ -1,14 +1,17 @@
 import { player, entities, state, timers } from '../../state/gameState.js'
+import { RELIC_SPAWN_INTERVAL } from '../../config/constants.js'
 import { distance } from '../../core/utils.js'
 import { addRelic } from './spawning.js'
-import { gainXp, getUpgradeLevel } from '../progression/xp.js'
+import { upgradeDefs } from '../../data/upgrades.js'
+import { applyUpgrade, gainXp, getUpgradeLevel } from '../progression/xp.js'
+import { openBossChest } from '../progression/chestRewards.js'
 import { openStatUpgradeFromQueue } from '../progression/relicMenu.js'
 
 export function updateRelicSpawner(dt) {
   timers.relic -= dt
   if (timers.relic <= 0 && entities.relics.length < 2) {
     addRelic()
-    timers.relic = 18
+    timers.relic = RELIC_SPAWN_INTERVAL
   }
 }
 
@@ -19,10 +22,39 @@ export function updateRelicCollisions(dt) {
     const dist = distance(player.x, player.y, relic.x, relic.y)
     if (dist < player.r + relic.r) {
       entities.relics.splice(i, 1)
+      if (relic.source === 'boss' && openBossChest(relic)) return
       state.pendingStatUps += 1
       state.pendingRelicRarities.push(relic.rarity || 'bronze')
-      if (!state.paused) openStatUpgradeFromQueue()
+      if (!state.paused) {
+        openStatUpgradeFromQueue()
+        return
+      }
     }
+  }
+}
+
+export function updateStageItemCollisions(dt) {
+  for (let i = entities.stageItems.length - 1; i >= 0; i -= 1) {
+    const item = entities.stageItems[i]
+    item.wobble += dt * 3
+    const dist = distance(player.x, player.y, item.x, item.y)
+    if (dist >= player.r + item.r) continue
+
+    entities.stageItems.splice(i, 1)
+    const option = upgradeDefs.find(entry => entry.id === item.upgradeId)
+    const currentLevel = option ? getUpgradeLevel(option.id) : 0
+
+    if (option && currentLevel < option.max) {
+      applyUpgrade(option)
+      const nextLevel = getUpgradeLevel(option.id)
+      state.noticeText = `Stage relic: ${item.name} level ${nextLevel}`
+    } else {
+      gainXp(25)
+      state.noticeText = `${item.name} converted to 25 XP`
+    }
+
+    state.stageItemsCollected += 1
+    state.noticeExpiresAt = state.elapsed + 3
   }
 }
 

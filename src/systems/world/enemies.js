@@ -9,10 +9,11 @@ import {
   WORLD_HEIGHT,
   WORLD_WIDTH,
 } from '../../config/constants.js'
-import { entities, orbitCache, player } from '../../state/gameState.js'
+import { entities, orbitCache, player, state } from '../../state/gameState.js'
 import { addOrb, addRelicAt } from './spawning.js'
 import { registerComboKill } from '../progression/xp.js'
 import { createQuadtree } from './quadtree.js'
+import { scaledCooldown, scaledDamage } from '../combat/scaling.js'
 
 const enemyQuadtree = createQuadtree({
   x: 0,
@@ -80,8 +81,8 @@ export function updateEnemies(dt) {
         const bx = blade.x - enemy.x
         const by = blade.y - enemy.y
         if (Math.hypot(bx, by) < enemy.r + player.bladeSize * 0.5) {
-          enemy.hp -= player.bladeDamage
-          enemy.bladeHitTimer = player.bladeHitCooldown
+          enemy.hp -= scaledDamage(player.bladeDamage)
+          enemy.bladeHitTimer = scaledCooldown(player.bladeHitCooldown)
           break
         }
       }
@@ -92,8 +93,8 @@ export function updateEnemies(dt) {
         const ox = orb.x - enemy.x
         const oy = orb.y - enemy.y
         if (Math.hypot(ox, oy) < enemy.r + 8) {
-          enemy.hp -= player.orbDamage
-          enemy.orbHitTimer = player.orbHitCooldown
+          enemy.hp -= scaledDamage(player.orbDamage)
+          enemy.orbHitTimer = scaledCooldown(player.orbHitCooldown)
           break
         }
       }
@@ -112,13 +113,23 @@ export function updateEnemies(dt) {
     if (enemy.hp <= 0) {
       entities.enemies.splice(i, 1)
       registerComboKill()
+      state.kills += 1
       const orbValue = enemy.isBoss
         ? BOSS_XP_REWARD
         : (enemy.tier === 2 ? 12 : 8) + (enemy.isElite ? ELITE_XP_BONUS : 0)
       addOrb(enemy.x, enemy.y, orbValue)
 
       if (enemy.isBoss) {
-        addRelicAt(enemy.x, enemy.y)
+        state.bossesDefeated += 1
+        const rarity =
+          enemy.bossWave >= 20 ? 'gold' : enemy.bossWave >= 10 ? 'silver' : null
+        addRelicAt(
+          enemy.x,
+          enemy.y,
+          rarity,
+          'boss',
+          Boolean(enemy.chestCanEvolve),
+        )
       }
 
       if (enemy.affix === 'volatile') {

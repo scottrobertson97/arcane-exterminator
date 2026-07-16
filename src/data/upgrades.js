@@ -11,8 +11,6 @@ const relicStatMultipliers = {
   gold: RELIC_GOLD_STAT_MULT,
 }
 
-const ORBITAL_PROJECTILE_SOFT_CAP = 32
-
 function getRelicStatMultiplier(rarity = 'bronze') {
   return relicStatMultipliers[rarity] || relicStatMultipliers.bronze
 }
@@ -24,6 +22,7 @@ function formatPercent(value) {
 export const upgradeDefs = [
   {
     id: 'pulse',
+    kind: 'weapon',
     max: 3,
     name: 'Lightning Pulse',
     desc: lvl =>
@@ -45,8 +44,8 @@ export const upgradeDefs = [
   },
   {
     id: 'blades',
+    kind: 'weapon',
     max: 4,
-    repeatable: true,
     name: 'Orbiting Blades',
     desc: lvl =>
       lvl === 0
@@ -55,11 +54,7 @@ export const upgradeDefs = [
           ? '+1 blade'
           : lvl === 2
             ? '+1 blade, +6 damage'
-            : lvl === 3
-              ? '+0.4 orbit speed'
-              : player.bladeCount < ORBITAL_PROJECTILE_SOFT_CAP
-                ? '+1 blade'
-                : '+3 blade damage',
+            : '+0.4 orbit speed',
     canShow: () => true,
     apply: lvl => {
       if (lvl === 1) {
@@ -72,15 +67,12 @@ export const upgradeDefs = [
         player.bladeDamage += 6
       } else if (lvl === 4) {
         player.bladeSpeed += 0.4
-      } else if (player.bladeCount < ORBITAL_PROJECTILE_SOFT_CAP) {
-        player.bladeCount += 1
-      } else {
-        player.bladeDamage += 3
       }
     },
   },
   {
     id: 'frost',
+    kind: 'weapon',
     max: 5,
     name: 'Frost Shards',
     desc: lvl =>
@@ -104,6 +96,7 @@ export const upgradeDefs = [
   },
   {
     id: 'nova',
+    kind: 'weapon',
     max: 4,
     name: 'Arcane Nova',
     desc: lvl =>
@@ -125,6 +118,7 @@ export const upgradeDefs = [
   },
   {
     id: 'chain',
+    kind: 'weapon',
     max: 4,
     name: 'Chain Lightning',
     desc: lvl =>
@@ -145,6 +139,7 @@ export const upgradeDefs = [
   },
   {
     id: 'starfall',
+    kind: 'weapon',
     max: 4,
     name: 'Starfall Barrage',
     desc: lvl =>
@@ -167,6 +162,7 @@ export const upgradeDefs = [
   },
   {
     id: 'mines',
+    kind: 'weapon',
     max: 5,
     name: 'Arc Mines',
     desc: lvl =>
@@ -190,6 +186,7 @@ export const upgradeDefs = [
   },
   {
     id: 'trail',
+    kind: 'weapon',
     max: 5,
     name: 'Molten Trail',
     desc: lvl =>
@@ -215,6 +212,7 @@ export const upgradeDefs = [
   },
   {
     id: 'vortex',
+    kind: 'weapon',
     max: 5,
     name: 'Gravity Well',
     desc: lvl =>
@@ -238,8 +236,8 @@ export const upgradeDefs = [
   },
   {
     id: 'solar',
+    kind: 'weapon',
     max: 4,
-    repeatable: true,
     name: 'Solar Orbs',
     desc: lvl =>
       lvl === 0
@@ -248,26 +246,18 @@ export const upgradeDefs = [
           ? '+1 orb'
           : lvl === 2
             ? '+2 damage'
-            : lvl === 3
-              ? '+0.4 orbit speed'
-              : player.orbCount < ORBITAL_PROJECTILE_SOFT_CAP
-                ? '+1 orb'
-                : '+2 orb damage',
+            : '+0.4 orbit speed',
     canShow: () => true,
     apply: lvl => {
       if (lvl === 1) player.orbUnlocked = true
       if (lvl === 2) player.orbCount += 1
       if (lvl === 3) player.orbDamage += 2
       if (lvl === 4) player.orbSpeed += 0.4
-      if (lvl > 4 && player.orbCount < ORBITAL_PROJECTILE_SOFT_CAP) {
-        player.orbCount += 1
-      } else if (lvl > 4) {
-        player.orbDamage += 2
-      }
     },
   },
   {
     id: 'bullets',
+    kind: 'weapon',
     max: 5,
     name: 'Firebolts',
     desc: lvl =>
@@ -291,12 +281,101 @@ export const upgradeDefs = [
   },
   {
     id: 'magnet',
+    kind: 'passive',
     max: 3,
     name: 'Magnet Field',
     desc: lvl => (lvl === 0 ? 'Unlocks orb magnetism' : '+25% pickup radius'),
     canShow: () => true,
     apply: lvl => {
       if (lvl >= 1) player.pickupRadius = Math.round(player.pickupRadius * 1.25)
+    },
+  },
+  {
+    id: 'might',
+    kind: 'passive',
+    max: 5,
+    name: 'Ember Sigil',
+    desc: () => 'Next rank: +10% weapon damage',
+    canShow: () => true,
+    apply: () => {
+      player.mightMultiplier = +(player.mightMultiplier * 1.1).toFixed(4)
+    },
+  },
+  {
+    id: 'cooldown',
+    kind: 'passive',
+    max: 5,
+    name: 'Chronicle',
+    desc: () => 'Next rank: -8% weapon cooldowns',
+    canShow: () => true,
+    apply: () => {
+      player.cooldownMultiplier = +(player.cooldownMultiplier * 0.92).toFixed(4)
+    },
+  },
+  {
+    id: 'vitality',
+    kind: 'passive',
+    max: 5,
+    name: 'Iron Ward',
+    desc: () => 'Next rank: +20% max HP and heal the increase',
+    canShow: () => true,
+    apply: () => {
+      const previousMaxHp = player.maxHp
+      player.maxHp = Math.round(player.maxHp * 1.2)
+      player.hp = Math.min(player.maxHp, player.hp + player.maxHp - previousMaxHp)
+    },
+  },
+  {
+    id: 'projectile_speed',
+    kind: 'passive',
+    max: 5,
+    name: 'Kinetic Rune',
+    desc: () => 'Next rank: +12% projectile speed',
+    canShow: () => true,
+    apply: () => {
+      player.bulletSpeed = Math.round(player.bulletSpeed * 1.12)
+      player.frostSpeed = Math.round(player.frostSpeed * 1.12)
+      player.starfallSpeed = Math.round(player.starfallSpeed * 1.12)
+    },
+  },
+  {
+    id: 'area',
+    kind: 'passive',
+    max: 5,
+    name: 'Astral Lens',
+    desc: () => 'Next rank: +10% effect area',
+    canShow: () => true,
+    apply: () => {
+      player.pulseRadius *= 1.1
+      player.novaRadius *= 1.1
+      player.bladeRadius *= 1.1
+      player.bladeSize *= 1.1
+      player.mineRadius *= 1.1
+      player.trailRadius *= 1.1
+      player.vortexRadius *= 1.1
+      player.orbRadius *= 1.1
+    },
+  },
+  {
+    id: 'move_speed',
+    kind: 'passive',
+    max: 5,
+    name: 'Windstep Boots',
+    desc: () => 'Next rank: +8% move speed',
+    canShow: () => true,
+    apply: () => {
+      player.speed = Math.round(player.speed * 1.08)
+    },
+  },
+  {
+    id: 'recovery',
+    kind: 'passive',
+    max: 5,
+    name: 'Mending Charm',
+    desc: () => 'Next rank: +0.35 HP recovery per second',
+    canShow: () => true,
+    apply: () => {
+      player.recovery += 0.35
     },
   },
 ]
@@ -306,22 +385,28 @@ export const statUpgrades = [
     name: 'Heavy Rounds',
     desc: (rarity = 'bronze') => {
       const percent = formatPercent(25 * getRelicStatMultiplier(rarity))
-      return `+${percent}% bullet damage`
+      return `+${percent}% all weapon damage`
     },
     apply: (rarity = 'bronze') => {
       const mult = getRelicStatMultiplier(rarity)
-      player.damage = Math.round(player.damage * (1 + 0.25 * mult))
+      player.mightMultiplier = +(
+        player.mightMultiplier *
+        (1 + 0.25 * mult)
+      ).toFixed(4)
     },
   },
   {
     name: 'Overclock',
     desc: (rarity = 'bronze') => {
       const percent = formatPercent(20 * getRelicStatMultiplier(rarity))
-      return `+${percent}% fire rate`
+      return `+${percent}% attack speed`
     },
     apply: (rarity = 'bronze') => {
       const mult = getRelicStatMultiplier(rarity)
-      player.fireRate = +(player.fireRate * (1 + 0.2 * mult)).toFixed(2)
+      player.cooldownMultiplier = +(
+        player.cooldownMultiplier /
+        (1 + 0.2 * mult)
+      ).toFixed(4)
     },
   },
   {
@@ -351,11 +436,14 @@ export const statUpgrades = [
     name: 'Railcast',
     desc: (rarity = 'bronze') => {
       const percent = formatPercent(20 * getRelicStatMultiplier(rarity))
-      return `+${percent}% bullet speed`
+      return `+${percent}% projectile speed`
     },
     apply: (rarity = 'bronze') => {
       const mult = getRelicStatMultiplier(rarity)
-      player.bulletSpeed = Math.round(player.bulletSpeed * (1 + 0.2 * mult))
+      const speedMultiplier = 1 + 0.2 * mult
+      player.bulletSpeed = Math.round(player.bulletSpeed * speedMultiplier)
+      player.frostSpeed = Math.round(player.frostSpeed * speedMultiplier)
+      player.starfallSpeed = Math.round(player.starfallSpeed * speedMultiplier)
     },
   },
 ]

@@ -1,6 +1,6 @@
 import { player } from '../../state/gameState.js'
 
-const SAVE_VERSION = 1
+const SAVE_VERSION = 2
 export const SAVE_KEY = 'waveSurvivors.save.v1'
 export const META_RANK_CAP = 5
 const META_COST_GROWTH = 1.6
@@ -63,6 +63,7 @@ function createDefaultLifetime() {
     runs: 0,
     totalTime: 0,
     bestWave: 0,
+    victories: 0,
     totalShardsEarned: 0,
   }
 }
@@ -103,6 +104,7 @@ function sanitizeLifetime(raw) {
   next.runs = Math.max(0, toInt(raw.runs, 0))
   next.totalTime = Math.max(0, toInt(raw.totalTime, 0))
   next.bestWave = Math.max(0, toInt(raw.bestWave, 0))
+  next.victories = Math.max(0, toInt(raw.victories, 0))
   next.totalShardsEarned = Math.max(0, toInt(raw.totalShardsEarned, 0))
 
   return next
@@ -246,26 +248,38 @@ export function applyMetaBonuses(metaRanks) {
   player.maxHp = Math.max(1, Math.round(player.maxHp * mult.maxHp))
   player.hp = player.maxHp
   player.speed = Math.max(1, Math.round(player.speed * mult.moveSpeed))
-  player.damage = Math.max(1, Math.round(player.damage * mult.damage))
-  player.fireRate = +(player.fireRate * mult.fireRate).toFixed(2)
+  player.mightMultiplier *= mult.damage
+  player.cooldownMultiplier /= mult.fireRate
   player.xpGainMultiplier = mult.xpGain
 
   return mult
 }
 
-export function computeShardReward(elapsedSeconds, wave) {
+export function computeShardReward(
+  elapsedSeconds,
+  wave,
+  victory = false,
+  bonusShards = 0,
+) {
   const safeElapsed = Math.max(0, elapsedSeconds)
   const safeWave = Math.max(1, wave)
   const earned = Math.floor(safeElapsed / 25) + Math.max(0, safeWave - 1) * 2
-  return Math.max(3, earned)
+  return Math.max(3, earned + (victory ? 20 : 0) + Math.max(0, bonusShards))
 }
 
-export function awardRunShards(saveData, elapsedSeconds, wave) {
-  const earned = computeShardReward(elapsedSeconds, wave)
+export function awardRunShards(
+  saveData,
+  elapsedSeconds,
+  wave,
+  victory = false,
+  bonusShards = 0,
+) {
+  const earned = computeShardReward(elapsedSeconds, wave, victory, bonusShards)
   saveData.shards += earned
   saveData.lifetime.runs += 1
   saveData.lifetime.totalTime += Math.max(0, Math.floor(elapsedSeconds))
   saveData.lifetime.bestWave = Math.max(saveData.lifetime.bestWave, Math.max(1, wave))
+  if (victory) saveData.lifetime.victories += 1
   saveData.lifetime.totalShardsEarned += earned
   return earned
 }

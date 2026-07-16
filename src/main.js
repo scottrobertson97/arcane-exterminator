@@ -1,4 +1,11 @@
-import { BOSS_WAVE_INTERVAL, WORLD_HEIGHT, WORLD_WIDTH } from './config/constants.js'
+import {
+  BOSS_WAVE_INTERVAL,
+  MAX_ENEMIES,
+  STAGE_DURATION,
+  STAGE_WAVE_COUNT,
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+} from './config/constants.js'
 import {
   controlsBack,
   ctx,
@@ -14,8 +21,11 @@ import { music } from './core/assets.js'
 import { camera, resizeCanvas, setZoomIndex } from './core/camera.js'
 import { configureLoop, loop } from './core/loop.js'
 import { clamp } from './core/utils.js'
+import { installTestApi } from './core/testApi.js'
+import { getWaveConfig, getWaveNumber } from './data/waves.js'
 import {
   input,
+  entities,
   player,
   state,
   SCREEN_STATES,
@@ -62,12 +72,19 @@ import {
   pulseShockwave,
 } from './systems/combat/abilities.js'
 import { updateOrbitCaches } from './systems/combat/orbitals.js'
-import { spawnEnemy, spawnMiniBoss } from './systems/world/spawning.js'
+import { scaledCooldown } from './systems/combat/scaling.js'
+import {
+  spawnEnemy,
+  spawnEnemyPack,
+  spawnMiniBoss,
+  spawnStageItems,
+} from './systems/world/spawning.js'
 import { updateEnemies } from './systems/world/enemies.js'
 import {
   updateHealthPackCollisions,
   updateRelicCollisions,
   updateRelicSpawner,
+  updateStageItemCollisions,
   updateXpOrbs,
 } from './systems/world/pickups.js'
 import {
@@ -100,6 +117,7 @@ import {
   drawPlayerHpRing,
   drawRelics,
   drawSolarOrbits,
+  drawStageItems,
 } from './systems/render/entities.js'
 import { drawMinimap } from './systems/render/minimap.js'
 
@@ -157,6 +175,10 @@ function renderMetaPanel() {
   if (!metaPanel.list || !metaPanel.shards) return
 
   metaPanel.shards.textContent = `${saveData.shards}`
+  if (metaPanel.lifetime) {
+    const lifetime = saveData.lifetime
+    metaPanel.lifetime.textContent = `Runs ${lifetime.runs} • Clears ${lifetime.victories} • Best Wave ${lifetime.bestWave}`
+  }
   metaPanel.list.innerHTML = ''
 
   for (const node of metaNodes) {
@@ -260,6 +282,11 @@ function updatePlayerMovement(dt) {
   player.isMoving = Math.hypot(player.x - startX, player.y - startY) > 0.5
 }
 
+function updatePlayerRecovery(dt) {
+  if (player.recovery <= 0 || player.hp <= 0 || player.hp >= player.maxHp) return
+  player.hp = Math.min(player.maxHp, player.hp + player.recovery * dt)
+}
+
 function updateWeaponFiring(dt) {
   shoot(dt)
   if (player.frostUnlocked) fireFrostShards(dt)
@@ -271,7 +298,7 @@ function updateWeaponFiring(dt) {
     timers.pulse -= dt
     if (timers.pulse <= 0) {
       pulseShockwave()
-      timers.pulse = player.pulseCooldown
+      timers.pulse = scaledCooldown(player.pulseCooldown)
     }
   }
 
@@ -279,7 +306,7 @@ function updateWeaponFiring(dt) {
     timers.nova -= dt
     if (timers.nova <= 0) {
       novaShockwave()
-      timers.nova = player.novaCooldown
+      timers.nova = scaledCooldown(player.novaCooldown)
     }
   }
 
@@ -287,35 +314,82 @@ function updateWeaponFiring(dt) {
     timers.chain -= dt
     if (timers.chain <= 0) {
       chainLightning()
-      timers.chain = player.chainCooldown
+      timers.chain = scaledCooldown(player.chainCooldown)
     }
   }
 }
 
 function updateEnemySpawner(dt) {
   timers.spawn -= dt
-  const wave = Math.floor(state.elapsed / state.waveDuration) + 1
-  const spawnInterval = Math.max(0.18, 1.2 - wave * 0.06)
+  const wave = getWaveNumber(state.elapsed, state.waveDuration)
+  const waveConfig = getWaveConfig(wave)
+
+  if (state.activeWave !== wave) {
+    state.activeWave = wave
+    timers.spawn = 0
+    state.noticeText = `Wave ${wave} / ${STAGE_WAVE_COUNT}${waveConfig.event ? ' — surge incoming' : ''}`
+    state.noticeExpiresAt = state.elapsed + 2.8
+
+    if (waveConfig.event) {
+      const availableSlots = Math.max(0, MAX_ENEMIES - entities.enemies.length)
+      const count = Math.min(availableSlots, waveConfig.event.count)
+      spawnEnemyPack(count, {
+        tier2Chance: waveConfig.tier2Chance,
+        hpMultiplier: waveConfig.event.hpMultiplier || waveConfig.hpMultiplier || 1,
+        speedMultiplier:
+          waveConfig.event.speedMultiplier || waveConfig.speedMultiplier || 1,
+        eventSpawn: true,
+      })
+    }
+  }
 
   while (wave >= state.nextBossWave) {
     spawnMiniBoss(state.nextBossWave)
+    state.noticeText = `Wave ${state.nextBossWave} guardian inbound — defeat it for a cache`
+    state.noticeExpiresAt = state.elapsed + 3.4
     state.nextBossWave += BOSS_WAVE_INTERVAL
   }
 
-  if (timers.spawn <= 0) {
-    spawnEnemy()
-    timers.spawn = spawnInterval
+  if (timers.spawn <= 0 && entities.enemies.length < MAX_ENEMIES) {
+    const deficit = Math.max(0, waveConfig.minAlive - entities.enemies.length)
+    const spawnCount = deficit > 0 ? Math.min(3, 1 + Math.floor(deficit / 18)) : 1
+    const availableSlots = MAX_ENEMIES - entities.enemies.length
+    for (let i = 0; i < Math.min(spawnCount, availableSlots); i += 1) {
+      spawnEnemy({
+        tier2Chance: waveConfig.tier2Chance,
+        hpMultiplier: waveConfig.hpMultiplier || 1,
+        speedMultiplier: waveConfig.speedMultiplier || 1,
+      })
+    }
+    timers.spawn = waveConfig.spawnInterval
   }
 }
 
-function showRunSummary() {
-  const wave = Math.floor(state.elapsed / state.waveDuration) + 1
+function showRunSummary(result = 'defeat') {
+  const wave = getWaveNumber(state.elapsed, state.waveDuration)
   const elapsedSeconds = Math.max(0, state.elapsed)
-  const earnedShards = awardRunShards(saveData, elapsedSeconds, wave)
+  const victory = result === 'victory'
+  const earnedShards = awardRunShards(
+    saveData,
+    elapsedSeconds,
+    wave,
+    victory,
+    state.bonusShards,
+  )
   saveData = saveProgress(saveData)
 
+  state.runResult = result
+  if (runSummaryUi.result) {
+    runSummaryUi.result.textContent = victory ? 'Stage Cleared' : 'Defeated'
+    runSummaryUi.result.classList.toggle('summary-victory', victory)
+  }
   if (runSummaryUi.wave) runSummaryUi.wave.textContent = `${wave}`
   if (runSummaryUi.time) runSummaryUi.time.textContent = formatTime(elapsedSeconds)
+  if (runSummaryUi.level) runSummaryUi.level.textContent = `${player.level}`
+  if (runSummaryUi.kills) runSummaryUi.kills.textContent = `${state.kills}`
+  if (runSummaryUi.evolutions) {
+    runSummaryUi.evolutions.textContent = `${state.evolutionCount}`
+  }
   if (runSummaryUi.shards) runSummaryUi.shards.textContent = `${earnedShards}`
   if (runSummaryUi.total) runSummaryUi.total.textContent = `${saveData.shards}`
 
@@ -330,7 +404,15 @@ function showRunSummary() {
 
 function checkGameOver() {
   if (player.hp > 0) return
-  showRunSummary()
+  showRunSummary('defeat')
+}
+
+function checkStageComplete() {
+  if (state.elapsed < STAGE_DURATION) return false
+  state.elapsed = STAGE_DURATION
+  entities.enemies.length = 0
+  showRunSummary('victory')
+  return true
 }
 
 function updateMenuCameraDrift(dt) {
@@ -364,7 +446,9 @@ function update(dt) {
   if (state.paused) return
 
   updateTime(dt)
+  if (checkStageComplete()) return
   updatePlayerMovement(dt)
+  updatePlayerRecovery(dt)
   updateRelicSpawner(dt)
   updateOrbitCaches(dt)
   updateWeaponFiring(dt)
@@ -376,6 +460,7 @@ function update(dt) {
   updateVortexes(dt)
   updateParticles(dt)
   updateRelicCollisions(dt)
+  updateStageItemCollisions(dt)
   updateHealthPackCollisions(dt)
   updateXpOrbs(dt)
   updatePulseEffects(dt)
@@ -398,6 +483,7 @@ function draw() {
   drawMines(cam)
   drawBullets(cam)
   drawParticles(cam)
+  drawStageItems(cam)
   drawRelics(cam)
   drawHealthPacks(cam)
   drawShockLinks(cam)
@@ -416,6 +502,7 @@ function draw() {
 function startRun() {
   resetGame()
   applyMetaBonuses(saveData.metaRanks)
+  spawnStageItems()
   state.paused = false
   setScreen(SCREEN_STATES.RUNNING)
   music.currentTime = 0
@@ -471,6 +558,7 @@ resizeCanvas()
 refreshMetaBonusText()
 renderMetaPanel()
 openTitleScreen()
+installTestApi({ startRun })
 
 configureLoop({ update, draw, updateHud })
 requestAnimationFrame(loop)

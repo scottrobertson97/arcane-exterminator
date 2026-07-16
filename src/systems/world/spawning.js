@@ -5,17 +5,20 @@ import {
   BOSS_RADIUS,
   BOSS_SPEED_BASE,
   BOSS_SPEED_WAVE_SCALE,
+  EVOLUTION_START_WAVE,
   ELITE_BASE_CHANCE,
   ELITE_FAST_SPEED_MULT,
   ELITE_MAX_CHANCE,
   ELITE_TANK_HP_MULT,
   ELITE_WAVE_BONUS,
+  MAX_XP_ORBS,
   RELIC_BRONZE_CHANCE,
   RELIC_GOLD_CHANCE,
   RELIC_SILVER_CHANCE,
   WORLD_WIDTH,
   WORLD_HEIGHT,
 } from '../../config/constants.js'
+import { stageItemDefs } from '../../data/stageItems.js'
 import { entities, state } from '../../state/gameState.js'
 import { camera } from '../../core/camera.js'
 
@@ -34,6 +37,15 @@ function rollRelicRarity() {
 }
 
 export function addOrb(x, y, value) {
+  if (entities.orbs.length >= MAX_XP_ORBS) {
+    const overflowOrb =
+      entities.orbs.find(orb => orb.isOverflow) || entities.orbs[0]
+    overflowOrb.value += value
+    overflowOrb.isOverflow = true
+    overflowOrb.r = Math.min(10, 7 + Math.log10(Math.max(1, overflowOrb.value)))
+    return
+  }
+
   entities.orbs.push({
     x,
     y,
@@ -42,6 +54,7 @@ export function addOrb(x, y, value) {
     r: 6,
     value,
     drift: Math.random() * Math.PI * 2,
+    isOverflow: false,
   })
 }
 
@@ -62,20 +75,41 @@ export function addRelic() {
     r: 10,
     wobble: Math.random() * Math.PI * 2,
     rarity: rollRelicRarity(),
+    source: 'world',
+    canEvolve: false,
   })
 }
 
-export function addRelicAt(x, y, rarity = null) {
+export function addRelicAt(
+  x,
+  y,
+  rarity = null,
+  source = 'world',
+  canEvolve = false,
+) {
   entities.relics.push({
     x: Math.max(40, Math.min(WORLD_WIDTH - 40, x)),
     y: Math.max(40, Math.min(WORLD_HEIGHT - 40, y)),
     r: 10,
     wobble: Math.random() * Math.PI * 2,
     rarity: rarity || rollRelicRarity(),
+    source,
+    canEvolve,
   })
 }
 
-export function spawnEnemy() {
+export function spawnStageItems() {
+  entities.stageItems.length = 0
+  for (const definition of stageItemDefs) {
+    entities.stageItems.push({
+      ...definition,
+      r: 14,
+      wobble: Math.random() * Math.PI * 2,
+    })
+  }
+}
+
+export function spawnEnemy(options = {}) {
   const wave = Math.floor(state.elapsed / state.waveDuration) + 1
   const edge = Math.floor(Math.random() * 4)
   const margin = 120
@@ -100,16 +134,18 @@ export function spawnEnemy() {
   x = Math.max(0, Math.min(WORLD_WIDTH, x))
   y = Math.max(0, Math.min(WORLD_HEIGHT, y))
 
-  const tier = Math.random() < Math.min(0.15 + wave * 0.01, 0.4) ? 2 : 1
+  const tierChance =
+    options.tier2Chance ?? Math.min(0.15 + wave * 0.01, 0.4)
+  const tier = options.forcedTier || (Math.random() < tierChance ? 2 : 1)
   const eliteChance = Math.min(ELITE_MAX_CHANCE, ELITE_BASE_CHANCE + wave * ELITE_WAVE_BONUS)
   const isElite = Math.random() < eliteChance
   const affix = isElite ? randomEliteAffix() : null
   const baseHp = tier === 2 ? 70 : 40
   const baseSpeed = tier === 2 ? 70 : 90
-  let hp = Math.round(baseHp + wave * 8)
-  let speed = baseSpeed + wave * 4
+  let hp = Math.round((baseHp + wave * 8) * (options.hpMultiplier || 1))
+  let speed = (baseSpeed + wave * 4) * (options.speedMultiplier || 1)
   let r = tier === 2 ? 16 : 12
-  const damage = tier === 2 ? 18 : 12
+  const damage = (tier === 2 ? 18 : 12) * (options.damageMultiplier || 1)
 
   if (affix === 'fast') {
     speed *= ELITE_FAST_SPEED_MULT
@@ -142,7 +178,12 @@ export function spawnEnemy() {
     shockTimer: 0,
     bladeHitTimer: 0,
     orbHitTimer: 0,
+    eventSpawn: Boolean(options.eventSpawn),
   })
+}
+
+export function spawnEnemyPack(count, options = {}) {
+  for (let i = 0; i < count; i += 1) spawnEnemy(options)
 }
 
 export function spawnMiniBoss(wave) {
@@ -186,6 +227,7 @@ export function spawnMiniBoss(wave) {
     elitePulse: 0,
     isBoss: true,
     bossWave: wave,
+    chestCanEvolve: wave >= EVOLUTION_START_WAVE,
     bossPulse: Math.random() * Math.PI * 2,
     vx: 0,
     vy: 0,

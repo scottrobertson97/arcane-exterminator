@@ -2,6 +2,7 @@ import { WORLD_HEIGHT, WORLD_WIDTH } from '../../config/constants.js'
 import { clamp } from '../../core/utils.js'
 import { entities, player, timers } from '../../state/gameState.js'
 import { nearestEnemy } from './targeting.js'
+import { scaledCooldown, scaledDamage } from './scaling.js'
 
 export function pulseShockwave() {
   entities.pulses.push({
@@ -19,7 +20,7 @@ export function pulseShockwave() {
     const dy = enemy.y - player.y
     const dist = Math.hypot(dx, dy) || 1
     if (dist <= player.pulseRadius) {
-      enemy.hp -= player.pulseDamage
+      enemy.hp -= scaledDamage(player.pulseDamage)
       enemy.shockTimer = 1.2
       const falloff = 1 - dist / player.pulseRadius
       const knock = player.pulseKnockback * Math.max(0.2, falloff)
@@ -30,6 +31,7 @@ export function pulseShockwave() {
 }
 
 export function novaShockwave() {
+  const evolved = Boolean(player.evolutions.star_aegis)
   entities.pulses.push({
     x: player.x,
     y: player.y,
@@ -37,15 +39,17 @@ export function novaShockwave() {
     max: player.novaRadius,
     life: 0.35,
     maxLife: 0.35,
-    type: 'nova',
+    type: evolved ? 'aegis' : 'nova',
   })
 
+  let hitCount = 0
   for (const enemy of entities.enemies) {
     const dx = enemy.x - player.x
     const dy = enemy.y - player.y
     const dist = Math.hypot(dx, dy) || 1
     if (dist <= player.novaRadius) {
-      enemy.hp -= player.novaDamage
+      enemy.hp -= scaledDamage(player.novaDamage)
+      hitCount += 1
       enemy.shockTimer = 0.6
       const falloff = 1 - dist / player.novaRadius
       const knock = player.novaKnockback * Math.max(0.2, falloff)
@@ -53,11 +57,17 @@ export function novaShockwave() {
       enemy.knockY += (dy / dist) * knock
     }
   }
+
+  if (evolved && hitCount > 0) {
+    const healing = Math.min(5, 1 + hitCount * 0.35)
+    player.hp = Math.min(player.maxHp, player.hp + healing)
+  }
 }
 
 export function chainLightning() {
   if (entities.enemies.length === 0) return
 
+  const evolved = Boolean(player.evolutions.tempest_lattice)
   const hit = []
   let current = nearestEnemy()
   if (!current) return
@@ -68,11 +78,12 @@ export function chainLightning() {
     x2: current.x,
     y2: current.y,
     life: 0.2,
+    type: evolved ? 'tempest' : 'chain',
   })
 
   for (let i = 0; i < player.chainCount + 1; i += 1) {
     if (!current) break
-    current.hp -= player.chainDamage
+    current.hp -= scaledDamage(player.chainDamage)
     current.shockTimer = Math.max(current.shockTimer, 0.8)
     hit.push(current)
 
@@ -92,6 +103,7 @@ export function chainLightning() {
         x2: next.enemy.x,
         y2: next.enemy.y,
         life: 0.2,
+        type: evolved ? 'tempest' : 'chain',
       })
     }
 
@@ -123,13 +135,13 @@ export function deployArcMines(dt) {
     r: 11,
     radius: player.mineRadius,
     triggerRadius: Math.max(20, player.mineRadius * 0.45),
-    damage: player.mineDamage,
+    damage: scaledDamage(player.mineDamage),
     armTimer: player.mineArmTime,
     life: player.mineLifetime,
     maxLife: player.mineLifetime,
   })
 
-  timers.mines = player.mineCooldown
+  timers.mines = scaledCooldown(player.mineCooldown)
 }
 
 export function castGravityWell(dt) {
@@ -139,14 +151,16 @@ export function castGravityWell(dt) {
   const target = nearestEnemy()
   if (!target) return
 
+  const evolved = Boolean(player.evolutions.singularity)
   entities.vortexes.push({
     x: target.x,
     y: target.y,
     r: player.vortexRadius,
     life: player.vortexDuration,
     maxLife: player.vortexDuration,
-    dps: player.vortexDps,
+    dps: scaledDamage(player.vortexDps),
     pull: player.vortexPull,
+    type: evolved ? 'singularity' : 'vortex',
   })
 
   entities.pulses.push({
@@ -156,8 +170,8 @@ export function castGravityWell(dt) {
     max: Math.max(26, player.vortexRadius * 0.35),
     life: 0.24,
     maxLife: 0.24,
-    type: 'vortex',
+    type: evolved ? 'singularity' : 'vortex',
   })
 
-  timers.vortex = player.vortexCooldown
+  timers.vortex = scaledCooldown(player.vortexCooldown)
 }

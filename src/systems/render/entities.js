@@ -47,6 +47,10 @@ export function drawBullets(cam) {
     ctx.fillStyle =
       bullet.type === 'frost'
         ? '#7cc7ff'
+        : bullet.type === 'glacial'
+          ? '#d8f3ff'
+          : bullet.type === 'inferno'
+            ? '#ffcf63'
         : bullet.type === 'starfall'
           ? '#ffd677'
           : '#ff7b3a'
@@ -77,11 +81,44 @@ export function drawMines(cam) {
   }
 }
 
+export function drawStageItems(cam) {
+  for (const item of entities.stageItems) {
+    const pulse = 0.7 + 0.3 * Math.sin(item.wobble)
+    const x = item.x - cam.x
+    const y = item.y - cam.y
+
+    ctx.save()
+    ctx.globalAlpha = pulse
+    ctx.fillStyle = 'rgba(17, 17, 22, 0.78)'
+    ctx.strokeStyle = item.color
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.arc(x, y, item.r + 6, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
+
+    ctx.strokeStyle = `${item.color}99`
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(x, y, item.r + 12 + pulse * 2, 0, Math.PI * 2)
+    ctx.stroke()
+
+    ctx.fillStyle = item.color
+    ctx.font = 'bold 17px monospace'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(item.glyph, x, y + 1)
+    ctx.restore()
+  }
+}
+
 export function drawRelics(cam) {
   for (const relic of entities.relics) {
     const pulse = 0.6 + 0.4 * Math.sin(relic.wobble)
     const rarityColor =
-      relic.rarity === 'gold'
+      relic.source === 'boss'
+        ? 'rgba(255, 240, 155, 0.98)'
+        : relic.rarity === 'gold'
         ? 'rgba(255, 221, 120, 0.95)'
         : relic.rarity === 'silver'
           ? 'rgba(200, 220, 255, 0.92)'
@@ -93,14 +130,16 @@ export function drawRelics(cam) {
           ? `rgba(200, 220, 255, ${pulse})`
           : `rgba(198, 145, 92, ${pulse})`
     const glowRadius =
-      relic.rarity === 'gold'
+      relic.source === 'boss'
+        ? relic.r + 11
+        : relic.rarity === 'gold'
         ? relic.r + 8
         : relic.rarity === 'silver'
           ? relic.r + 6
           : relic.r + 4
 
     ctx.strokeStyle = rarityColor
-    ctx.lineWidth = relic.rarity === 'gold' ? 3 : 2
+    ctx.lineWidth = relic.source === 'boss' || relic.rarity === 'gold' ? 3 : 2
     ctx.beginPath()
     ctx.arc(relic.x - cam.x, relic.y - cam.y, glowRadius, 0, Math.PI * 2)
     ctx.stroke()

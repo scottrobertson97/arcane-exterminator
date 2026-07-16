@@ -1,4 +1,5 @@
 import { entities, player, timers } from '../../state/gameState.js'
+import { scaledCooldown, scaledDamage } from '../combat/scaling.js'
 
 export function updateParticles(dt) {
   for (let i = entities.particles.length - 1; i >= 0; i -= 1) {
@@ -97,7 +98,7 @@ export function updateMines(dt) {
 export function updateTrails(dt) {
   if (player.trailUnlocked && player.isMoving) {
     timers.trail -= dt
-    const interval = Math.max(0.06, player.trailSpawnInterval)
+    const interval = Math.max(0.06, scaledCooldown(player.trailSpawnInterval))
     while (timers.trail <= 0) {
       const maxPatches = Math.max(1, Math.round(player.trailMaxPatches))
       while (entities.trails.length >= maxPatches) {
@@ -108,7 +109,7 @@ export function updateTrails(dt) {
         x: player.x,
         y: player.y,
         r: player.trailRadius,
-        dps: player.trailDps,
+        dps: scaledDamage(player.trailDps),
         life: player.trailPatchLife,
         maxLife: player.trailPatchLife,
       })

@@ -25,9 +25,21 @@ export function drawMinimap() {
   for (const relic of entities.relics) {
     const rx = mapX + relic.x * scaleX
     const ry = mapY + relic.y * scaleY
+    ctx.fillStyle =
+      relic.source === 'boss'
+        ? 'rgba(255, 202, 76, 0.98)'
+        : 'rgba(80, 170, 255, 0.9)'
     ctx.beginPath()
     ctx.arc(rx, ry, 2.6, 0, Math.PI * 2)
     ctx.fill()
+  }
+
+
+  for (const item of entities.stageItems) {
+    const ix = mapX + item.x * scaleX
+    const iy = mapY + item.y * scaleY
+    ctx.fillStyle = item.color || 'rgba(170, 120, 240, 0.95)'
+    ctx.fillRect(ix - 2.4, iy - 2.4, 4.8, 4.8)
   }
 
   ctx.fillStyle = 'rgba(217, 79, 43, 0.95)'
