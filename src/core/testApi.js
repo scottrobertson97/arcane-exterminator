@@ -2,9 +2,50 @@ import { STAGE_DURATION } from '../config/constants.js'
 import { evolutionDefs } from '../data/evolutions.js'
 import { upgradeDefs } from '../data/upgrades.js'
 import { getWaveNumber } from '../data/waves.js'
-import { entities, player, state } from '../state/gameState.js'
+import { entities, player, state, timers } from '../state/gameState.js'
 import { applyUpgrade, gainXp, getUpgradeLevel } from '../systems/progression/xp.js'
-import { addRelicAt, spawnMiniBoss } from '../systems/world/spawning.js'
+import {
+  addRelicAt,
+  spawnEnemyAt,
+  spawnMiniBoss,
+} from '../systems/world/spawning.js'
+
+const ENEMY_TYPE_KEYS = [
+  'rat_small',
+  'rat_big',
+  'ash_bat',
+  'ironback_beetle',
+  'hex_acolyte',
+]
+
+function getEnemyType(enemy) {
+  return enemy.spriteKey || (enemy.tier === 2 ? 'rat_big' : 'rat_small')
+}
+
+function getEnemyTypeCounts() {
+  const counts = Object.fromEntries(ENEMY_TYPE_KEYS.map(key => [key, 0]))
+  for (const enemy of entities.enemies) {
+    const type = getEnemyType(enemy)
+    counts[type] = (counts[type] || 0) + 1
+  }
+  return counts
+}
+
+function getEnemyBehaviorSample() {
+  return entities.enemies
+    .filter(enemy => !getEnemyType(enemy).startsWith('rat_'))
+    .slice(0, 3)
+    .map(enemy => ({
+      type: getEnemyType(enemy),
+      phase: enemy.behaviorPhase || 'seek',
+      timer: +(enemy.phaseTimer || 0).toFixed(2),
+      cooldown: +(enemy.abilityCooldown || 0).toFixed(2),
+      charge: [
+        +(enemy.chargeX || 0).toFixed(2),
+        +(enemy.chargeY || 0).toFixed(2),
+      ],
+    }))
+}
 
 function snapshot() {
   return {
@@ -29,6 +70,9 @@ function snapshot() {
     },
     entities: {
       enemies: entities.enemies.length,
+      enemyTypes: getEnemyTypeCounts(),
+      enemyProjectiles: (entities.enemyProjectiles || []).length,
+      enemyBehaviorSample: getEnemyBehaviorSample(),
       bosses: entities.enemies.filter(enemy => enemy.isBoss).length,
       orbs: entities.orbs.length,
       relics: entities.relics.length,
@@ -74,6 +118,16 @@ export function installTestApi({ startRun }) {
     spawnBoss(wave = 10) {
       spawnMiniBoss(Math.max(1, Math.floor(wave)))
     },
+    spawnEnemyType(
+      type,
+      { x = player.x + 180, y = player.y, elite = false, affix = null } = {},
+    ) {
+      return spawnEnemyAt(Number(x), Number(y), {
+        forcedArchetype: type,
+        forcedElite: Boolean(elite),
+        forcedAffix: affix,
+      })
+    },
     defeatBosses() {
       for (const enemy of entities.enemies) {
         if (enemy.isBoss) enemy.hp = 0
@@ -81,6 +135,7 @@ export function installTestApi({ startRun }) {
     },
     clearEnemies() {
       entities.enemies.length = 0
+      entities.enemyProjectiles.length = 0
     },
     teleport(x, y) {
       player.x = Number(x)
@@ -115,6 +170,34 @@ export function installTestApi({ startRun }) {
     ['test-drop-chest', 'Drop Evo Cache', () => api.dropBossChest()],
     ['test-stage-might', 'Collect Ember', () => api.teleportToStageItem('might')],
     ['test-spawn-boss', 'Spawn Evo Boss', () => api.spawnBoss(10)],
+    [
+      'test-enemy-roster',
+      'Spawn Enemy Roster',
+      () => {
+        entities.enemies.length = 0
+        entities.enemyProjectiles.length = 0
+        entities.bullets.length = 0
+        player.maxHp = Math.max(player.maxHp, 10000)
+        player.hp = player.maxHp
+        player.damage = 0
+        state.elapsed = 0
+        state.waveDuration = STAGE_DURATION
+        state.activeWave = getWaveNumber(state.elapsed, state.waveDuration)
+        timers.spawn = 9999
+        api.spawnEnemyType('ash_bat', {
+          x: player.x + 150,
+          y: player.y - 90,
+        })
+        api.spawnEnemyType('ironback_beetle', {
+          x: player.x + 190,
+          y: player.y,
+        })
+        api.spawnEnemyType('hex_acolyte', {
+          x: player.x + 150,
+          y: player.y + 90,
+        })
+      },
+    ],
     [
       'test-kill-evo-boss',
       'Kill Evo Boss',

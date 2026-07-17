@@ -8,6 +8,7 @@ export const MAX_PASSIVE_SLOTS = 6
 export const STAGE_DURATION = 10 * 60
 export const STAGE_WAVE_COUNT = 20
 export const MAX_ENEMIES = 160
+export const MAX_ENEMY_PROJECTILES = 120
 export const MAX_XP_ORBS = 300
 export const EVOLUTION_START_WAVE = 10
 export const RELIC_SPAWN_INTERVAL = 75

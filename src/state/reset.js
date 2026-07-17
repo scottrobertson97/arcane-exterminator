@@ -94,6 +94,7 @@ export function resetGame() {
 
   entities.bullets.length = 0
   entities.enemies.length = 0
+  entities.enemyProjectiles.length = 0
   entities.orbs.length = 0
   entities.mines.length = 0
   entities.trails.length = 0
@@ -108,6 +109,7 @@ export function resetGame() {
   orbitCache.solars.length = 0
 
   state.elapsed = 0
+  state.waveDuration = 30
   state.activeWave = 0
   state.paused = false
   state.nextBossWave = BOSS_WAVE_INTERVAL

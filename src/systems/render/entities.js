@@ -3,6 +3,7 @@ import {
   bladeSprite,
   enemyBigSprite,
   enemySmallSprite,
+  enemySpriteMap,
   healthSprite,
   playerSprite,
   relicSprite,
@@ -112,6 +113,46 @@ export function drawStageItems(cam) {
   }
 }
 
+export function drawEnemyProjectiles(cam) {
+  for (const projectile of entities.enemyProjectiles || []) {
+    const x = projectile.x - cam.x
+    const y = projectile.y - cam.y
+    const radius = Math.max(3, projectile.r || 5)
+    const velocityX = projectile.vx || 0
+    const velocityY = projectile.vy || 0
+    const angle = Math.atan2(velocityY, velocityX)
+
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.rotate(angle)
+
+    ctx.fillStyle = 'rgba(91, 70, 158, 0.42)'
+    ctx.fillRect(-radius * 3.5, -1, radius * 2.7, 2)
+
+    ctx.fillStyle = '#3f2631'
+    ctx.beginPath()
+    ctx.moveTo(radius + 2, 0)
+    ctx.lineTo(0, radius + 1)
+    ctx.lineTo(-radius - 2, 0)
+    ctx.lineTo(0, -radius - 1)
+    ctx.closePath()
+    ctx.fill()
+
+    ctx.fillStyle = projectile.color || '#8067c7'
+    ctx.beginPath()
+    ctx.moveTo(radius, 0)
+    ctx.lineTo(0, radius - 1)
+    ctx.lineTo(-radius, 0)
+    ctx.lineTo(0, -radius + 1)
+    ctx.closePath()
+    ctx.fill()
+
+    ctx.fillStyle = '#b7dcff'
+    ctx.fillRect(-1, -1, 3, 3)
+    ctx.restore()
+  }
+}
+
 export function drawRelics(cam) {
   for (const relic of entities.relics) {
     const pulse = 0.6 + 0.4 * Math.sin(relic.wobble)
@@ -206,9 +247,99 @@ export function drawHealthPacks(cam) {
   }
 }
 
+function getChargeDirection(enemy) {
+  const objectDirection = enemy.chargeDirection || enemy.chargeDir
+  let x =
+    objectDirection?.x ??
+    enemy.chargeDirX ??
+    enemy.chargeDx ??
+    enemy.chargeX ??
+    enemy.vx ??
+    0
+  let y =
+    objectDirection?.y ??
+    enemy.chargeDirY ??
+    enemy.chargeDy ??
+    enemy.chargeY ??
+    enemy.vy ??
+    0
+  let length = Math.hypot(x, y)
+  if (length < 0.001) {
+    x = player.x - enemy.x
+    y = player.y - enemy.y
+    length = Math.hypot(x, y)
+  }
+  if (length < 0.001) return { x: 1, y: 0 }
+  return { x: x / length, y: y / length }
+}
+
+function drawEnemyBehaviorTelegraph(enemy, cam) {
+  if (
+    enemy.spriteKey !== 'ash_bat' &&
+    enemy.spriteKey !== 'ironback_beetle'
+  ) {
+    return
+  }
+
+  const phase = String(enemy.behaviorPhase || '').toLowerCase()
+  const isWindup = phase.includes('windup')
+  const isCharge = phase.includes('charge') || phase.includes('swoop')
+  if (!isWindup && !isCharge) return
+
+  const direction = getChargeDirection(enemy)
+  const perpendicular = { x: -direction.y, y: direction.x }
+  const x = enemy.x - cam.x
+  const y = enemy.y - cam.y
+  const isBeetle = enemy.spriteKey === 'ironback_beetle'
+  const distance = isBeetle ? 104 : 82
+  const start = enemy.r + 5
+  const endX = x + direction.x * distance
+  const endY = y + direction.y * distance
+  const color = isBeetle
+    ? isWindup
+      ? 'rgba(232, 165, 108, 0.9)'
+      : 'rgba(255, 112, 109, 0.82)'
+    : isWindup
+      ? 'rgba(128, 103, 199, 0.9)'
+      : 'rgba(183, 220, 255, 0.82)'
+
+  ctx.save()
+  ctx.strokeStyle = color
+  ctx.fillStyle = color
+  ctx.lineWidth = isWindup ? 2 : 4
+  ctx.setLineDash(isWindup ? [6, 5] : [])
+  ctx.beginPath()
+  ctx.moveTo(x + direction.x * start, y + direction.y * start)
+  ctx.lineTo(endX, endY)
+  ctx.stroke()
+  ctx.setLineDash([])
+
+  const arrowSize = isBeetle ? 9 : 7
+  ctx.beginPath()
+  ctx.moveTo(endX, endY)
+  ctx.lineTo(
+    endX - direction.x * arrowSize + perpendicular.x * arrowSize * 0.65,
+    endY - direction.y * arrowSize + perpendicular.y * arrowSize * 0.65,
+  )
+  ctx.lineTo(
+    endX - direction.x * arrowSize - perpendicular.x * arrowSize * 0.65,
+    endY - direction.y * arrowSize - perpendicular.y * arrowSize * 0.65,
+  )
+  ctx.closePath()
+  ctx.fill()
+
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.arc(x, y, enemy.r + (isWindup ? 6 : 3), 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.restore()
+}
+
 export function drawEnemies(cam) {
   for (const enemy of entities.enemies) {
-    const sprite = enemy.tier === 2 ? enemyBigSprite : enemySmallSprite
+    const fallbackSprite = enemy.tier === 2 ? enemyBigSprite : enemySmallSprite
+    const sprite = enemySpriteMap[enemy.spriteKey] || fallbackSprite
+    drawEnemyBehaviorTelegraph(enemy, cam)
     if (enemy.isBoss) {
       const pulse = 0.45 + 0.35 * Math.sin(enemy.bossPulse || 0)
       ctx.strokeStyle = `rgba(255, 220, 120, ${pulse})`

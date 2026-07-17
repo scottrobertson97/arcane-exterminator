@@ -101,9 +101,13 @@ This backlog defines a staged rollout for future gameplay features.
   - Save v2 records lifetime victories and rewrites older canonical saves without discarding valid ranks or shards.
   - Permanent Power/Tempo now route through global Might/Cooldown scaling instead of affecting only starter firebolts.
 
-10. Enemy Factions
+10. [x] Enemy Factions
 - Distinct enemy families with unique behavior patterns.
 - Files: enemy data model, spawn tables, enemy AI, render telegraphs.
+- Status notes:
+  - Added Ash Bat swoops, Ironback Beetle windup charges, and Hex Acolyte ranged kiting alongside the existing rats.
+  - Wave-specific weighted mixes phase each family into the run while preserving the existing enemy and projectile caps.
+  - Generated 16x16 sprites, charge telegraphs, hostile Hex bolts, deterministic test spawns, and reset/file-launch parity are included.
 
 11. Skill Tree Progression
 - Branching specialization tracks replacing flat choices.
@@ -147,7 +151,7 @@ This backlog defines a staged rollout for future gameplay features.
 - Implemented state growth: active wave, kills, bosses defeated, evolution/stage-item counts, run result, and live notice state.
 - Implemented player growth: global Might/Cooldown/recovery values plus upgrade/evolution ownership.
 - Implemented entities: fixed stage items and richer boss/cache metadata; future factions/event objects remain optional.
-- Implemented data modules: `waves.js`, `stageItems.js`, and `evolutions.js`; `enemyArchetypes.js` remains optional.
+- Implemented data modules: `waves.js`, `stageItems.js`, `evolutions.js`, and `enemyArchetypes.js`.
 
 ## Validation Gates
 1. Parity baseline

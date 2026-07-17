@@ -143,6 +143,7 @@ export const player = {
 export const entities = {
   bullets: [],
   enemies: [],
+  enemyProjectiles: [],
   orbs: [],
   mines: [],
   trails: [],

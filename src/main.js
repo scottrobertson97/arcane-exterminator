@@ -80,6 +80,7 @@ import {
   spawnStageItems,
 } from './systems/world/spawning.js'
 import { updateEnemies } from './systems/world/enemies.js'
+import { updateEnemyProjectiles } from './systems/world/enemyProjectiles.js'
 import {
   updateHealthPackCollisions,
   updateRelicCollisions,
@@ -111,6 +112,7 @@ import {
   drawBladeOrbits,
   drawBullets,
   drawEnemies,
+  drawEnemyProjectiles,
   drawHealthPacks,
   drawMines,
   drawPlayer,
@@ -335,6 +337,7 @@ function updateEnemySpawner(dt) {
       const count = Math.min(availableSlots, waveConfig.event.count)
       spawnEnemyPack(count, {
         tier2Chance: waveConfig.tier2Chance,
+        enemyMix: waveConfig.event.enemyMix || waveConfig.enemyMix,
         hpMultiplier: waveConfig.event.hpMultiplier || waveConfig.hpMultiplier || 1,
         speedMultiplier:
           waveConfig.event.speedMultiplier || waveConfig.speedMultiplier || 1,
@@ -357,6 +360,7 @@ function updateEnemySpawner(dt) {
     for (let i = 0; i < Math.min(spawnCount, availableSlots); i += 1) {
       spawnEnemy({
         tier2Chance: waveConfig.tier2Chance,
+        enemyMix: waveConfig.enemyMix,
         hpMultiplier: waveConfig.hpMultiplier || 1,
         speedMultiplier: waveConfig.speedMultiplier || 1,
       })
@@ -411,6 +415,7 @@ function checkStageComplete() {
   if (state.elapsed < STAGE_DURATION) return false
   state.elapsed = STAGE_DURATION
   entities.enemies.length = 0
+  entities.enemyProjectiles.length = 0
   showRunSummary('victory')
   return true
 }
@@ -454,6 +459,7 @@ function update(dt) {
   updateWeaponFiring(dt)
   updateEnemySpawner(dt)
   updateEnemies(dt)
+  updateEnemyProjectiles(dt)
   updateBullets(dt)
   updateMines(dt)
   updateTrails(dt)
@@ -482,6 +488,7 @@ function draw() {
   drawSolarOrbits(cam)
   drawMines(cam)
   drawBullets(cam)
+  drawEnemyProjectiles(cam)
   drawParticles(cam)
   drawStageItems(cam)
   drawRelics(cam)

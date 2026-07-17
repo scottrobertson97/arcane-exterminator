@@ -8,6 +8,7 @@
   var STAGE_DURATION = 10 * 60;
   var STAGE_WAVE_COUNT = 20;
   var MAX_ENEMIES = 160;
+  var MAX_ENEMY_PROJECTILES = 120;
   var MAX_XP_ORBS = 300;
   var EVOLUTION_START_WAVE = 10;
   var RELIC_SPAWN_INTERVAL = 75;
@@ -109,6 +110,19 @@
   enemySmallSprite.src = "sprites/rat_gray.png";
   var enemyBigSprite = new Image();
   enemyBigSprite.src = "sprites/rat_brown.png";
+  var ashBatSprite = new Image();
+  ashBatSprite.src = "sprites/ash_bat.png";
+  var ironbackBeetleSprite = new Image();
+  ironbackBeetleSprite.src = "sprites/ironback_beetle.png";
+  var hexAcolyteSprite = new Image();
+  hexAcolyteSprite.src = "sprites/hex_acolyte.png";
+  var enemySpriteMap = Object.freeze({
+    rat_small: enemySmallSprite,
+    rat_big: enemyBigSprite,
+    ash_bat: ashBatSprite,
+    ironback_beetle: ironbackBeetleSprite,
+    hex_acolyte: hexAcolyteSprite
+  });
   var bladeSprite = new Image();
   bladeSprite.src = "sprites/knife.png";
   var relicSprite = new Image();
@@ -257,6 +271,7 @@
   var entities = {
     bullets: [],
     enemies: [],
+    enemyProjectiles: [],
     orbs: [],
     mines: [],
     trails: [],
@@ -783,36 +798,107 @@
   ];
 
   // src/data/waves.js
+  function enemyMix(entries) {
+    return Object.freeze(entries.map((entry) => Object.freeze({ ...entry })));
+  }
+  var RAT_ONLY = enemyMix([{ id: "rat", weight: 1 }]);
+  var BAT_INTRO = enemyMix([
+    { id: "rat", weight: 0.78 },
+    { id: "ash_bat", weight: 0.22 }
+  ]);
+  var BEETLE_INTRO = enemyMix([
+    { id: "rat", weight: 0.64 },
+    { id: "ash_bat", weight: 0.22 },
+    { id: "ironback_beetle", weight: 0.14 }
+  ]);
+  var ACOLYTE_INTRO = enemyMix([
+    { id: "rat", weight: 0.58 },
+    { id: "ash_bat", weight: 0.2 },
+    { id: "ironback_beetle", weight: 0.14 },
+    { id: "hex_acolyte", weight: 0.08 }
+  ]);
+  var MID_STAGE = enemyMix([
+    { id: "rat", weight: 0.52 },
+    { id: "ash_bat", weight: 0.2 },
+    { id: "ironback_beetle", weight: 0.16 },
+    { id: "hex_acolyte", weight: 0.12 }
+  ]);
+  var LATE_STAGE = enemyMix([
+    { id: "rat", weight: 0.5 },
+    { id: "ash_bat", weight: 0.19 },
+    { id: "ironback_beetle", weight: 0.17 },
+    { id: "hex_acolyte", weight: 0.14 }
+  ]);
+  var FINAL_STAGE = enemyMix([
+    { id: "rat", weight: 0.5 },
+    { id: "ash_bat", weight: 0.18 },
+    { id: "ironback_beetle", weight: 0.16 },
+    { id: "hex_acolyte", weight: 0.16 }
+  ]);
+  var BAT_SURGE = enemyMix([
+    { id: "rat", weight: 0.4 },
+    { id: "ash_bat", weight: 0.6 }
+  ]);
+  var BEETLE_SURGE = enemyMix([
+    { id: "rat", weight: 0.45 },
+    { id: "ash_bat", weight: 0.1 },
+    { id: "ironback_beetle", weight: 0.45 }
+  ]);
+  var ACOLYTE_SURGE = enemyMix([
+    { id: "rat", weight: 0.42 },
+    { id: "ash_bat", weight: 0.12 },
+    { id: "ironback_beetle", weight: 0.16 },
+    { id: "hex_acolyte", weight: 0.3 }
+  ]);
   var waveDefs = [
-    { minAlive: 12, spawnInterval: 0.95, tier2Chance: 0.05 },
+    { minAlive: 12, spawnInterval: 0.95, tier2Chance: 0.05, enemyMix: RAT_ONLY },
     {
       minAlive: 18,
       spawnInterval: 0.82,
       tier2Chance: 0.08,
-      event: { count: 6, speedMultiplier: 1.35, hpMultiplier: 0.8 }
+      enemyMix: BAT_INTRO,
+      event: {
+        count: 6,
+        speedMultiplier: 1.35,
+        hpMultiplier: 0.8,
+        enemyMix: BAT_SURGE
+      }
     },
-    { minAlive: 24, spawnInterval: 0.72, tier2Chance: 0.12 },
+    { minAlive: 24, spawnInterval: 0.72, tier2Chance: 0.12, enemyMix: BAT_INTRO },
     {
       minAlive: 30,
       spawnInterval: 0.62,
       tier2Chance: 0.15,
-      event: { count: 10, speedMultiplier: 1.2 }
+      enemyMix: BAT_INTRO,
+      event: { count: 10, speedMultiplier: 1.2, enemyMix: BAT_SURGE }
     },
-    { minAlive: 34, spawnInterval: 0.58, tier2Chance: 0.18 },
-    { minAlive: 38, spawnInterval: 0.52, tier2Chance: 0.2 },
+    { minAlive: 34, spawnInterval: 0.58, tier2Chance: 0.18, enemyMix: BEETLE_INTRO },
+    { minAlive: 38, spawnInterval: 0.52, tier2Chance: 0.2, enemyMix: BEETLE_INTRO },
     {
       minAlive: 44,
       spawnInterval: 0.48,
       tier2Chance: 0.22,
-      event: { count: 12, speedMultiplier: 1.4, hpMultiplier: 0.82 }
+      enemyMix: BEETLE_INTRO,
+      event: {
+        count: 12,
+        speedMultiplier: 1.4,
+        hpMultiplier: 0.82,
+        enemyMix: BAT_SURGE
+      }
     },
-    { minAlive: 50, spawnInterval: 0.44, tier2Chance: 0.24 },
-    { minAlive: 56, spawnInterval: 0.4, tier2Chance: 0.26 },
+    { minAlive: 50, spawnInterval: 0.44, tier2Chance: 0.24, enemyMix: ACOLYTE_INTRO },
+    { minAlive: 56, spawnInterval: 0.4, tier2Chance: 0.26, enemyMix: ACOLYTE_INTRO },
     {
       minAlive: 62,
       spawnInterval: 0.36,
       tier2Chance: 0.28,
-      event: { count: 14, hpMultiplier: 1.15, speedMultiplier: 0.9 }
+      enemyMix: ACOLYTE_INTRO,
+      event: {
+        count: 14,
+        hpMultiplier: 1.15,
+        speedMultiplier: 0.9,
+        enemyMix: BEETLE_SURGE
+      }
     },
     {
       minAlive: 85,
@@ -820,31 +906,50 @@
       tier2Chance: 0.05,
       hpMultiplier: 0.65,
       speedMultiplier: 1.12,
-      event: { count: 26, hpMultiplier: 0.55, speedMultiplier: 1.25 }
+      enemyMix: MID_STAGE,
+      event: {
+        count: 26,
+        hpMultiplier: 0.55,
+        speedMultiplier: 1.25,
+        enemyMix: BAT_SURGE
+      }
     },
-    { minAlive: 70, spawnInterval: 0.32, tier2Chance: 0.3 },
-    { minAlive: 76, spawnInterval: 0.3, tier2Chance: 0.32 },
+    { minAlive: 70, spawnInterval: 0.32, tier2Chance: 0.3, enemyMix: MID_STAGE },
+    { minAlive: 76, spawnInterval: 0.3, tier2Chance: 0.32, enemyMix: MID_STAGE },
     {
       minAlive: 82,
       spawnInterval: 0.28,
       tier2Chance: 0.34,
-      event: { count: 16, speedMultiplier: 1.35 }
+      enemyMix: MID_STAGE,
+      event: { count: 16, speedMultiplier: 1.35, enemyMix: ACOLYTE_SURGE }
     },
-    { minAlive: 90, spawnInterval: 0.26, tier2Chance: 0.36 },
-    { minAlive: 96, spawnInterval: 0.24, tier2Chance: 0.38 },
+    { minAlive: 90, spawnInterval: 0.26, tier2Chance: 0.36, enemyMix: MID_STAGE },
+    { minAlive: 96, spawnInterval: 0.24, tier2Chance: 0.38, enemyMix: LATE_STAGE },
     {
       minAlive: 105,
       spawnInterval: 0.22,
       tier2Chance: 0.4,
-      event: { count: 20, hpMultiplier: 1.2, speedMultiplier: 0.92 }
+      enemyMix: LATE_STAGE,
+      event: {
+        count: 20,
+        hpMultiplier: 1.2,
+        speedMultiplier: 0.92,
+        enemyMix: BEETLE_SURGE
+      }
     },
-    { minAlive: 115, spawnInterval: 0.21, tier2Chance: 0.42 },
-    { minAlive: 125, spawnInterval: 0.2, tier2Chance: 0.44 },
+    { minAlive: 115, spawnInterval: 0.21, tier2Chance: 0.42, enemyMix: LATE_STAGE },
+    { minAlive: 125, spawnInterval: 0.2, tier2Chance: 0.44, enemyMix: FINAL_STAGE },
     {
       minAlive: 140,
       spawnInterval: 0.18,
       tier2Chance: 0.46,
-      event: { count: 24, speedMultiplier: 1.3, hpMultiplier: 1.1 }
+      enemyMix: FINAL_STAGE,
+      event: {
+        count: 24,
+        speedMultiplier: 1.3,
+        hpMultiplier: 1.1,
+        enemyMix: ACOLYTE_SURGE
+      }
     }
   ];
   function getWaveNumber(elapsed, waveDuration) {
@@ -928,6 +1033,70 @@
     player.upgrades[option.id] = next;
   }
 
+  // src/data/enemyArchetypes.js
+  var enemyArchetypes = Object.freeze({
+    rat: Object.freeze({
+      id: "rat",
+      spriteKey: "rat_small",
+      hpMultiplier: 1,
+      speedMultiplier: 1,
+      damageMultiplier: 1,
+      radiusDelta: 0,
+      xpBonus: 0,
+      behavior: "seek"
+    }),
+    ash_bat: Object.freeze({
+      id: "ash_bat",
+      spriteKey: "ash_bat",
+      hpMultiplier: 0.68,
+      speedMultiplier: 1.34,
+      damageMultiplier: 0.8,
+      radiusDelta: -2,
+      xpBonus: 1,
+      behavior: "swoop"
+    }),
+    ironback_beetle: Object.freeze({
+      id: "ironback_beetle",
+      spriteKey: "ironback_beetle",
+      hpMultiplier: 2.15,
+      speedMultiplier: 0.65,
+      damageMultiplier: 1.25,
+      radiusDelta: 3,
+      xpBonus: 4,
+      behavior: "charge"
+    }),
+    hex_acolyte: Object.freeze({
+      id: "hex_acolyte",
+      spriteKey: "hex_acolyte",
+      hpMultiplier: 0.9,
+      speedMultiplier: 0.78,
+      damageMultiplier: 0.9,
+      radiusDelta: 0,
+      xpBonus: 3,
+      behavior: "kite"
+    })
+  });
+  function getEnemyArchetype(id) {
+    return enemyArchetypes[id] || enemyArchetypes.rat;
+  }
+  function chooseEnemyArchetype(enemyMix2) {
+    if (!Array.isArray(enemyMix2) || enemyMix2.length === 0) {
+      return enemyArchetypes.rat;
+    }
+    const weightedArchetypes = enemyMix2.map((entry) => ({
+      archetype: enemyArchetypes[entry?.id],
+      weight: Number(entry?.weight)
+    })).filter((entry) => entry.archetype && Number.isFinite(entry.weight) && entry.weight > 0);
+    const totalWeight = weightedArchetypes.reduce((total, entry) => total + entry.weight, 0);
+    if (totalWeight <= 0) return enemyArchetypes.rat;
+    let roll = Math.random() * totalWeight;
+    for (const entry of weightedArchetypes) {
+      roll -= entry.weight;
+      if (roll < 0) return entry.archetype;
+    }
+    return weightedArchetypes[weightedArchetypes.length - 1].archetype;
+  }
+
   // src/data/stageItems.js
   var stageItemDefs = [
     {
@@ -968,6 +1137,35 @@
   var eliteAffixes = ["fast", "tank", "volatile", "leech"];
   function randomEliteAffix() {
     return eliteAffixes[Math.floor(Math.random() * eliteAffixes.length)];
+  }
+  function randomAbilityCooldown(behavior) {
+    if (behavior === "swoop") return 0.8 + Math.random() * 0.8;
+    if (behavior === "charge") return 1.5 + Math.random() * 1.2;
+    if (behavior === "kite") return 1 + Math.random() * 1.1;
+    return 0;
+  }
+  function getEdgeSpawnPoint(margin) {
+    const edge = Math.floor(Math.random() * 4);
+    const cam = camera();
+    let x = 0;
+    let y = 0;
+    if (edge === 0) {
+      x = cam.x - margin;
+      y = cam.y + Math.random() * cam.viewHeight;
+    } else if (edge === 1) {
+      x = cam.x + cam.viewWidth + margin;
+      y = cam.y + Math.random() * cam.viewHeight;
+    } else if (edge === 2) {
+      x = cam.x + Math.random() * cam.viewWidth;
+      y = cam.y - margin;
+    } else {
+      x = cam.x + Math.random() * cam.viewWidth;
+      y = cam.y + cam.viewHeight + margin;
+    }
+    return {
+      x: Math.max(0, Math.min(WORLD_WIDTH, x)),
+      y: Math.max(0, Math.min(WORLD_HEIGHT, y))
+    };
   }
   function rollRelicRarity() {
     const total = RELIC_GOLD_CHANCE + RELIC_SILVER_CHANCE + RELIC_BRONZE_CHANCE;
@@ -1037,39 +1235,22 @@
       });
     }
   }
-  function spawnEnemy(options = {}) {
+  function createEnemy(x, y, options = {}) {
     const wave = Math.floor(state.elapsed / state.waveDuration) + 1;
-    const edge = Math.floor(Math.random() * 4);
-    const margin = 120;
-    const cam = camera();
-    let x = 0;
-    let y = 0;
-    if (edge === 0) {
-      x = cam.x - margin;
-      y = cam.y + Math.random() * cam.viewHeight;
-    } else if (edge === 1) {
-      x = cam.x + cam.viewWidth + margin;
-      y = cam.y + Math.random() * cam.viewHeight;
-    } else if (edge === 2) {
-      x = cam.x + Math.random() * cam.viewWidth;
-      y = cam.y - margin;
-    } else {
-      x = cam.x + Math.random() * cam.viewWidth;
-      y = cam.y + cam.viewHeight + margin;
-    }
-    x = Math.max(0, Math.min(WORLD_WIDTH, x));
-    y = Math.max(0, Math.min(WORLD_HEIGHT, y));
+    const archetype = options.forcedArchetype ? getEnemyArchetype(options.forcedArchetype) : chooseEnemyArchetype(options.enemyMix);
     const tierChance = options.tier2Chance ?? Math.min(0.15 + wave * 0.01, 0.4);
     const tier = options.forcedTier || (Math.random() < tierChance ? 2 : 1);
     const eliteChance = Math.min(ELITE_MAX_CHANCE, ELITE_BASE_CHANCE + wave * ELITE_WAVE_BONUS);
-    const isElite = Math.random() < eliteChance;
-    const affix = isElite ? randomEliteAffix() : null;
+    const isElite = options.forcedElite === void 0 ? Boolean(options.forcedAffix) || Math.random() < eliteChance : Boolean(options.forcedElite);
+    const affix = isElite ? options.forcedAffix || randomEliteAffix() : null;
     const baseHp = tier === 2 ? 70 : 40;
     const baseSpeed = tier === 2 ? 70 : 90;
-    let hp = Math.round((baseHp + wave * 8) * (options.hpMultiplier || 1));
-    let speed = (baseSpeed + wave * 4) * (options.speedMultiplier || 1);
-    let r = tier === 2 ? 16 : 12;
-    const damage = (tier === 2 ? 18 : 12) * (options.damageMultiplier || 1);
+    let hp = Math.round(
+      (baseHp + wave * 8) * archetype.hpMultiplier * (options.hpMultiplier ?? 1)
+    );
+    let speed = (baseSpeed + wave * 4) * archetype.speedMultiplier * (options.speedMultiplier ?? 1);
+    let r = (tier === 2 ? 16 : 12) + archetype.radiusDelta;
+    const damage = (tier === 2 ? 18 : 12) * archetype.damageMultiplier * (options.damageMultiplier ?? 1);
     if (affix === "fast") {
       speed *= ELITE_FAST_SPEED_MULT;
     } else if (affix === "tank") {
@@ -1081,18 +1262,30 @@
     } else if (affix === "volatile") {
       speed *= 1.08;
     }
-    entities.enemies.push({
-      x,
-      y,
+    const enemy = {
+      x: Math.max(0, Math.min(WORLD_WIDTH, x)),
+      y: Math.max(0, Math.min(WORLD_HEIGHT, y)),
       r,
       hp,
       maxHp: hp,
       speed,
       damage,
       tier,
+      archetype: archetype.id,
+      spriteKey: archetype.id === "rat" && tier === 2 ? "rat_big" : archetype.spriteKey,
+      behavior: archetype.behavior,
+      xpValue: (tier === 2 ? 12 : 8) + archetype.xpBonus,
       isElite,
       affix,
       elitePulse: Math.random() * Math.PI * 2,
+      behaviorAge: 0,
+      behaviorPhase: "seek",
+      phaseTimer: 0,
+      abilityCooldown: randomAbilityCooldown(archetype.behavior),
+      chargeX: 0,
+      chargeY: 0,
+      chargeHit: false,
+      strafeDirection: Math.random() < 0.5 ? -1 : 1,
       vx: 0,
       vy: 0,
       knockX: 0,
@@ -1101,32 +1294,22 @@
       bladeHitTimer: 0,
       orbHitTimer: 0,
       eventSpawn: Boolean(options.eventSpawn)
-    });
+    };
+    entities.enemies.push(enemy);
+    return enemy;
+  }
+  function spawnEnemy(options = {}) {
+    const position = getEdgeSpawnPoint(120);
+    return createEnemy(position.x, position.y, options);
+  }
+  function spawnEnemyAt(x, y, options = {}) {
+    return createEnemy(Number(x) || 0, Number(y) || 0, options);
   }
   function spawnEnemyPack(count, options = {}) {
     for (let i = 0; i < count; i += 1) spawnEnemy(options);
   }
   function spawnMiniBoss(wave) {
-    const edge = Math.floor(Math.random() * 4);
-    const margin = 140;
-    const cam = camera();
-    let x = 0;
-    let y = 0;
-    if (edge === 0) {
-      x = cam.x - margin;
-      y = cam.y + Math.random() * cam.viewHeight;
-    } else if (edge === 1) {
-      x = cam.x + cam.viewWidth + margin;
-      y = cam.y + Math.random() * cam.viewHeight;
-    } else if (edge === 2) {
-      x = cam.x + Math.random() * cam.viewWidth;
-      y = cam.y - margin;
-    } else {
-      x = cam.x + Math.random() * cam.viewWidth;
-      y = cam.y + cam.viewHeight + margin;
-    }
-    x = Math.max(0, Math.min(WORLD_WIDTH, x));
-    y = Math.max(0, Math.min(WORLD_HEIGHT, y));
+    const { x, y } = getEdgeSpawnPoint(140);
     const hp = Math.round(BOSS_HP_BASE + wave * BOSS_HP_WAVE_SCALE);
     const speed = BOSS_SPEED_BASE + wave * BOSS_SPEED_WAVE_SCALE;
     entities.enemies.push({
@@ -1138,9 +1321,20 @@
       speed,
       damage: BOSS_DAMAGE,
       tier: 2,
+      archetype: "rat",
+      spriteKey: "rat_big",
+      behavior: "seek",
       isElite: false,
       affix: null,
       elitePulse: 0,
+      behaviorAge: 0,
+      behaviorPhase: "seek",
+      phaseTimer: 0,
+      abilityCooldown: 0,
+      chargeX: 0,
+      chargeY: 0,
+      chargeHit: false,
+      strafeDirection: 1,
       isBoss: true,
       bossWave: wave,
       chestCanEvolve: wave >= EVOLUTION_START_WAVE,
@@ -1156,6 +1350,36 @@
   }
 
   // src/core/testApi.js
+  var ENEMY_TYPE_KEYS = [
+    "rat_small",
+    "rat_big",
+    "ash_bat",
+    "ironback_beetle",
+    "hex_acolyte"
+  ];
+  function getEnemyType(enemy) {
+    return enemy.spriteKey || (enemy.tier === 2 ? "rat_big" : "rat_small");
+  }
+  function getEnemyTypeCounts() {
+    const counts = Object.fromEntries(ENEMY_TYPE_KEYS.map((key) => [key, 0]));
+    for (const enemy of entities.enemies) {
+      const type = getEnemyType(enemy);
+      counts[type] = (counts[type] || 0) + 1;
+    }
+    return counts;
+  }
+  function getEnemyBehaviorSample() {
+    return entities.enemies.filter((enemy) => !getEnemyType(enemy).startsWith("rat_")).slice(0, 3).map((enemy) => ({
+      type: getEnemyType(enemy),
+      phase: enemy.behaviorPhase || "seek",
+      timer: +(enemy.phaseTimer || 0).toFixed(2),
+      cooldown: +(enemy.abilityCooldown || 0).toFixed(2),
+      charge: [
+        +(enemy.chargeX || 0).toFixed(2),
+        +(enemy.chargeY || 0).toFixed(2)
+      ]
+    }));
+  }
   function snapshot() {
     return {
       screen: state.screen,
@@ -1179,6 +1403,9 @@
       },
       entities: {
         enemies: entities.enemies.length,
+        enemyTypes: getEnemyTypeCounts(),
+        enemyProjectiles: (entities.enemyProjectiles || []).length,
+        enemyBehaviorSample: getEnemyBehaviorSample(),
         bosses: entities.enemies.filter((enemy) => enemy.isBoss).length,
         orbs: entities.orbs.length,
         relics: entities.relics.length,
@@ -1220,6 +1447,13 @@
       spawnBoss(wave = 10) {
         spawnMiniBoss(Math.max(1, Math.floor(wave)));
       },
+      spawnEnemyType(type, { x = player.x + 180, y = player.y, elite = false, affix = null } = {}) {
+        return spawnEnemyAt(Number(x), Number(y), {
+          forcedArchetype: type,
+          forcedElite: Boolean(elite),
+          forcedAffix: affix
+        });
+      },
       defeatBosses() {
         for (const enemy of entities.enemies) {
           if (enemy.isBoss) enemy.hp = 0;
@@ -1227,6 +1461,7 @@
       },
       clearEnemies() {
         entities.enemies.length = 0;
+        entities.enemyProjectiles.length = 0;
       },
       teleport(x, y) {
         player.x = Number(x);
@@ -1259,6 +1494,34 @@
       ["test-drop-chest", "Drop Evo Cache", () => api.dropBossChest()],
       ["test-stage-might", "Collect Ember", () => api.teleportToStageItem("might")],
       ["test-spawn-boss", "Spawn Evo Boss", () => api.spawnBoss(10)],
+      [
+        "test-enemy-roster",
+        "Spawn Enemy Roster",
+        () => {
+          entities.enemies.length = 0;
+          entities.enemyProjectiles.length = 0;
+          entities.bullets.length = 0;
+          player.maxHp = Math.max(player.maxHp, 1e4);
+          player.hp = player.maxHp;
+          player.damage = 0;
+          state.elapsed = 0;
+          state.waveDuration = STAGE_DURATION;
+          state.activeWave = getWaveNumber(state.elapsed, state.waveDuration);
+          timers.spawn = 9999;
+          api.spawnEnemyType("ash_bat", {
+            x: player.x + 150,
+            y: player.y - 90
+          });
+          api.spawnEnemyType("ironback_beetle", {
+            x: player.x + 190,
+            y: player.y
+          });
+          api.spawnEnemyType("hex_acolyte", {
+            x: player.x + 150,
+            y: player.y + 90
+          });
+        }
+      ],
       [
         "test-kill-evo-boss",
         "Kill Evo Boss",
@@ -1384,6 +1647,7 @@
     player.evolutions = {};
     entities.bullets.length = 0;
     entities.enemies.length = 0;
+    entities.enemyProjectiles.length = 0;
     entities.orbs.length = 0;
     entities.mines.length = 0;
     entities.trails.length = 0;
@@ -1397,6 +1661,7 @@
     orbitCache.blades.length = 0;
     orbitCache.solars.length = 0;
     state.elapsed = 0;
+    state.waveDuration = 30;
     state.activeWave = 0;
     state.paused = false;
     state.nextBossWave = BOSS_WAVE_INTERVAL;
@@ -2388,6 +2653,56 @@
     }
   }
 
+  // src/systems/world/enemyProjectiles.js
+  function spawnEnemyProjectile(projectile) {
+    if (entities.enemyProjectiles.length >= MAX_ENEMY_PROJECTILES) return false;
+    const x = Number(projectile.x);
+    const y = Number(projectile.y);
+    const vx = Number(projectile.vx);
+    const vy = Number(projectile.vy);
+    if (![x, y, vx, vy].every(Number.isFinite)) return false;
+    entities.enemyProjectiles.push({
+      x,
+      y,
+      vx,
+      vy,
+      r: Number.isFinite(projectile.r) ? Math.max(1, projectile.r) : 5,
+      damage: Number.isFinite(projectile.damage) ? Math.max(0, projectile.damage) : 0,
+      life: Number.isFinite(projectile.life) ? Math.max(0.05, projectile.life) : 3,
+      type: projectile.type || "enemy",
+      color: projectile.color || "#b86cff"
+    });
+    return true;
+  }
+  function updateEnemyProjectiles(dt) {
+    const step = Number.isFinite(dt) ? Math.max(0, dt) : 0;
+    if (entities.enemyProjectiles.length > MAX_ENEMY_PROJECTILES) {
+      entities.enemyProjectiles.splice(
+        0,
+        entities.enemyProjectiles.length - MAX_ENEMY_PROJECTILES
+      );
+    }
+    for (let i = entities.enemyProjectiles.length - 1; i >= 0; i -= 1) {
+      const projectile = entities.enemyProjectiles[i];
+      projectile.life = Number.isFinite(projectile.life) ? projectile.life - step : 0;
+      projectile.x += projectile.vx * step;
+      projectile.y += projectile.vy * step;
+      const radius = Number.isFinite(projectile.r) ? Math.max(1, projectile.r) : 1;
+      const outOfBounds = projectile.x < -radius || projectile.x > WORLD_WIDTH + radius || projectile.y < -radius || projectile.y > WORLD_HEIGHT + radius;
+      const invalid = !Number.isFinite(projectile.x) || !Number.isFinite(projectile.y) || !Number.isFinite(projectile.vx) || !Number.isFinite(projectile.vy);
+      if (projectile.life <= 0 || outOfBounds || invalid) {
+        entities.enemyProjectiles.splice(i, 1);
+        continue;
+      }
+      const dx = player.x - projectile.x;
+      const dy = player.y - projectile.y;
+      if (Math.hypot(dx, dy) <= player.r + radius) {
+        player.hp -= Number.isFinite(projectile.damage) ? Math.max(0, projectile.damage) : 0;
+        entities.enemyProjectiles.splice(i, 1);
+      }
+    }
+  }
+
   // src/systems/world/enemies.js
   var enemyQuadtree = createQuadtree({
     x: 0,
@@ -2396,13 +2711,261 @@
     height: WORLD_HEIGHT
   });
   var nearbyEnemies = [];
+  var BAT_WINDUP_TIME = 0.25;
+  var BAT_SWOOP_TIME = 0.45;
+  var BEETLE_WINDUP_TIME = 0.65;
+  var BEETLE_CHARGE_TIME = 0.65;
+  var HEX_MIN_RANGE = 170;
+  var HEX_MAX_RANGE = 250;
+  function finiteOr(value, fallback = 0) {
+    return Number.isFinite(value) ? value : fallback;
+  }
+  function setLockedDirection(enemy, dx, dy, dist) {
+    if (dist > 1e-3) {
+      enemy.chargeX = dx / dist;
+      enemy.chargeY = dy / dist;
+      return;
+    }
+    const velocityLength = Math.hypot(enemy.vx, enemy.vy);
+    enemy.chargeX = velocityLength > 1e-3 ? enemy.vx / velocityLength : 1;
+    enemy.chargeY = velocityLength > 1e-3 ? enemy.vy / velocityLength : 0;
+  }
+  function sanitizeEnemyState(enemy) {
+    enemy.vx = finiteOr(enemy.vx);
+    enemy.vy = finiteOr(enemy.vy);
+    enemy.knockX = finiteOr(enemy.knockX);
+    enemy.knockY = finiteOr(enemy.knockY);
+    enemy.shockTimer = Math.max(0, finiteOr(enemy.shockTimer));
+    enemy.bladeHitTimer = finiteOr(enemy.bladeHitTimer);
+    enemy.orbHitTimer = finiteOr(enemy.orbHitTimer);
+    enemy.elitePulse = finiteOr(enemy.elitePulse);
+    enemy.bossPulse = finiteOr(enemy.bossPulse);
+    enemy.behaviorAge = Math.max(0, finiteOr(enemy.behaviorAge));
+    enemy.behaviorPhase = typeof enemy.behaviorPhase === "string" ? enemy.behaviorPhase : "seek";
+    enemy.phaseTimer = Math.max(0, finiteOr(enemy.phaseTimer));
+    enemy.abilityCooldown = Math.max(0, finiteOr(enemy.abilityCooldown));
+    enemy.chargeX = finiteOr(enemy.chargeX);
+    enemy.chargeY = finiteOr(enemy.chargeY);
+    enemy.chargeHit = Boolean(enemy.chargeHit);
+    enemy.strafeDirection = enemy.strafeDirection === -1 ? -1 : 1;
+  }
+  function beginLockedAttack(enemy, phase, duration, dx, dy, dist) {
+    setLockedDirection(enemy, dx, dy, dist);
+    enemy.behaviorPhase = phase;
+    enemy.phaseTimer = duration;
+    enemy.chargeHit = false;
+  }
+  function ashBatMovement(enemy, dx, dy, dist, speed, slow, sepVX, sepVY, dt) {
+    enemy.behaviorAge += dt;
+    if (!["seek", "windup", "swoop"].includes(enemy.behaviorPhase)) {
+      enemy.behaviorPhase = "seek";
+    }
+    if (enemy.behaviorPhase === "seek") {
+      enemy.abilityCooldown -= dt;
+      if (enemy.abilityCooldown <= 0) {
+        beginLockedAttack(enemy, "windup", BAT_WINDUP_TIME, dx, dy, dist);
+      }
+    } else {
+      enemy.phaseTimer -= dt;
+      if (enemy.phaseTimer <= 0) {
+        if (enemy.behaviorPhase === "windup") {
+          enemy.behaviorPhase = "swoop";
+          enemy.phaseTimer = BAT_SWOOP_TIME;
+        } else {
+          enemy.behaviorPhase = "seek";
+          enemy.phaseTimer = 0;
+          enemy.abilityCooldown = 1.35 + Math.random() * 0.65;
+        }
+      }
+    }
+    if (enemy.behaviorPhase === "swoop") {
+      return {
+        direct: true,
+        vx: enemy.chargeX * speed * 2.5 * slow,
+        vy: enemy.chargeY * speed * 2.5 * slow
+      };
+    }
+    if (enemy.behaviorPhase === "windup") {
+      return {
+        steer: 10,
+        vx: -enemy.chargeX * speed * 0.18 * slow + sepVX * 0.3,
+        vy: -enemy.chargeY * speed * 0.18 * slow + sepVY * 0.3
+      };
+    }
+    const towardX = dx / dist;
+    const towardY = dy / dist;
+    const weave = Math.sin(enemy.behaviorAge * 7.5) * speed * 0.55 * slow;
+    return {
+      steer: 7,
+      vx: towardX * speed * slow - towardY * weave + sepVX,
+      vy: towardY * speed * slow + towardX * weave + sepVY
+    };
+  }
+  function emitBeetleWindup(enemy) {
+    if (entities.particles.length >= 600) return;
+    for (let p = 0; p < 2; p += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      entities.particles.push({
+        x: enemy.x + Math.cos(angle) * enemy.r,
+        y: enemy.y + Math.sin(angle) * enemy.r,
+        vx: Math.cos(angle) * 28,
+        vy: Math.sin(angle) * 28,
+        r: 2 + Math.random() * 1.5,
+        life: 0.35,
+        color: "spark"
+      });
+    }
+  }
+  function ironbackMovement(enemy, dx, dy, dist, speed, slow, sepVX, sepVY, dt) {
+    enemy.behaviorAge += dt;
+    enemy.telegraphTimer = finiteOr(enemy.telegraphTimer);
+    if (!["seek", "windup", "charge"].includes(enemy.behaviorPhase)) {
+      enemy.behaviorPhase = "seek";
+    }
+    if (enemy.behaviorPhase === "seek") {
+      enemy.abilityCooldown -= dt;
+      if (enemy.abilityCooldown <= 0) {
+        beginLockedAttack(enemy, "windup", BEETLE_WINDUP_TIME, dx, dy, dist);
+        enemy.telegraphTimer = 0;
+      }
+    } else {
+      enemy.phaseTimer -= dt;
+      if (enemy.behaviorPhase === "windup") {
+        enemy.telegraphTimer -= dt;
+        if (enemy.telegraphTimer <= 0) {
+          emitBeetleWindup(enemy);
+          enemy.telegraphTimer = 0.12;
+        }
+      }
+      if (enemy.phaseTimer <= 0) {
+        if (enemy.behaviorPhase === "windup") {
+          enemy.behaviorPhase = "charge";
+          enemy.phaseTimer = BEETLE_CHARGE_TIME;
+          enemy.chargeHit = false;
+        } else {
+          enemy.behaviorPhase = "seek";
+          enemy.phaseTimer = 0;
+          enemy.abilityCooldown = 2.15 + Math.random() * 0.7;
+        }
+      }
+    }
+    if (enemy.behaviorPhase === "charge") {
+      return {
+        direct: true,
+        vx: enemy.chargeX * speed * 3.6 * slow,
+        vy: enemy.chargeY * speed * 3.6 * slow
+      };
+    }
+    if (enemy.behaviorPhase === "windup") {
+      return {
+        steer: 12,
+        vx: sepVX * 0.2,
+        vy: sepVY * 0.2
+      };
+    }
+    return {
+      steer: 5,
+      vx: dx / dist * speed * 0.58 * slow + sepVX,
+      vy: dy / dist * speed * 0.58 * slow + sepVY
+    };
+  }
+  function fireHexBolt(enemy, dx, dy, dist) {
+    const projectileSpeed = 210;
+    const spawned = spawnEnemyProjectile({
+      x: enemy.x,
+      y: enemy.y,
+      vx: dx / dist * projectileSpeed,
+      vy: dy / dist * projectileSpeed,
+      r: 5,
+      damage: Math.max(5, finiteOr(enemy.projectileDamage, enemy.damage * 0.55)),
+      life: 3.2,
+      type: "hex_bolt",
+      color: "#b86cff"
+    });
+    enemy.abilityCooldown = spawned ? 1.85 + Math.random() * 0.3 : 0.25;
+  }
+  function hexAcolyteMovement(enemy, dx, dy, dist, speed, slow, sepVX, sepVY, dt) {
+    enemy.behaviorAge += dt;
+    enemy.behaviorPhase = "kite";
+    enemy.strafeTimer = finiteOr(enemy.strafeTimer, 1.4) - dt;
+    if (enemy.strafeTimer <= 0) {
+      enemy.strafeDirection *= -1;
+      enemy.strafeTimer = 1.35 + Math.random() * 1.1;
+    }
+    enemy.abilityCooldown -= dt;
+    if (enemy.abilityCooldown <= 0 && dist <= 480) {
+      fireHexBolt(enemy, dx, dy, dist);
+    }
+    const towardX = dx / dist;
+    const towardY = dy / dist;
+    let radial = (dist - 210) / 40 * speed * 0.38;
+    if (dist < HEX_MIN_RANGE) radial = -speed * 0.92;
+    else if (dist > HEX_MAX_RANGE) radial = speed * 0.82;
+    const strafe = speed * 0.62 * enemy.strafeDirection;
+    return {
+      steer: 6,
+      vx: (towardX * radial - towardY * strafe) * slow + sepVX,
+      vy: (towardY * radial + towardX * strafe) * slow + sepVY
+    };
+  }
+  function movementForEnemy(enemy, dx, dy, dist, sepX, sepY, slow, dt) {
+    const speed = Math.max(0, finiteOr(enemy.speed));
+    const sepVX = sepX * ENEMY_SEP_FORCE;
+    const sepVY = sepY * ENEMY_SEP_FORCE;
+    if (enemy.archetype === "ash_bat") {
+      return ashBatMovement(enemy, dx, dy, dist, speed, slow, sepVX, sepVY, dt);
+    }
+    if (enemy.archetype === "ironback_beetle") {
+      return ironbackMovement(enemy, dx, dy, dist, speed, slow, sepVX, sepVY, dt);
+    }
+    if (enemy.archetype === "hex_acolyte") {
+      return hexAcolyteMovement(enemy, dx, dy, dist, speed, slow, sepVX, sepVY, dt);
+    }
+    return {
+      steer: 6,
+      vx: dx / dist * speed * slow + sepVX,
+      vy: dy / dist * speed * slow + sepVY
+    };
+  }
+  function applyContactDamage(enemy, dist, dt) {
+    if (dist >= enemy.r + player.r) return;
+    const isChargingBeetle = enemy.archetype === "ironback_beetle" && enemy.behaviorPhase === "charge";
+    if (isChargingBeetle) {
+      if (enemy.chargeHit) return;
+      const burstDamage = Math.max(
+        0,
+        finiteOr(enemy.chargeDamage, finiteOr(enemy.damage) * 1.6)
+      );
+      player.hp -= burstDamage;
+      enemy.chargeHit = true;
+      if (enemy.affix === "leech") {
+        const maxHp = finiteOr(enemy.maxHp, finiteOr(enemy.hp));
+        enemy.hp = Math.min(
+          maxHp,
+          enemy.hp + burstDamage * ELITE_LEECH_HEAL_FACTOR
+        );
+      }
+      return;
+    }
+    const contactDamage = Math.max(0, finiteOr(enemy.damage)) * dt;
+    player.hp -= contactDamage;
+    if (enemy.affix === "leech") {
+      const maxHp = finiteOr(enemy.maxHp, finiteOr(enemy.hp));
+      enemy.hp = Math.min(
+        maxHp,
+        enemy.hp + contactDamage * ELITE_LEECH_HEAL_FACTOR
+      );
+    }
+  }
   function updateEnemies(dt) {
+    const step = Number.isFinite(dt) ? Math.max(0, dt) : 0;
     enemyQuadtree.clear();
     for (const enemy of entities.enemies) {
       enemyQuadtree.insert(enemy);
     }
     for (let i = entities.enemies.length - 1; i >= 0; i -= 1) {
       const enemy = entities.enemies[i];
+      sanitizeEnemyState(enemy);
       const dx = player.x - enemy.x;
       const dy = player.y - enemy.y;
       const dist = Math.hypot(dx, dy) || 1;
@@ -2422,27 +2985,27 @@
           sepY += oy / od * push;
         }
       }
-      if (enemy.shockTimer > 0) enemy.shockTimer -= dt;
-      if (enemy.bladeHitTimer > 0) enemy.bladeHitTimer -= dt;
-      if (enemy.orbHitTimer > 0) enemy.orbHitTimer -= dt;
-      if (enemy.isElite) enemy.elitePulse += dt * 6;
-      if (enemy.isBoss) enemy.bossPulse += dt * 4;
+      if (enemy.shockTimer > 0) enemy.shockTimer = Math.max(0, enemy.shockTimer - step);
+      if (enemy.bladeHitTimer > 0) enemy.bladeHitTimer -= step;
+      if (enemy.orbHitTimer > 0) enemy.orbHitTimer -= step;
+      if (enemy.isElite) enemy.elitePulse += step * 6;
+      if (enemy.isBoss) enemy.bossPulse += step * 4;
       const slow = enemy.shockTimer > 0 ? 0.55 : 1;
-      const seekVX = dx / dist * enemy.speed * slow;
-      const seekVY = dy / dist * enemy.speed * slow;
-      const sepVX = sepX * ENEMY_SEP_FORCE;
-      const sepVY = sepY * ENEMY_SEP_FORCE;
-      const desiredVX = seekVX + sepVX;
-      const desiredVY = seekVY + sepVY;
-      const steer = 6;
-      enemy.vx += (desiredVX - enemy.vx) * steer * dt;
-      enemy.vy += (desiredVY - enemy.vy) * steer * dt;
+      const movement = movementForEnemy(enemy, dx, dy, dist, sepX, sepY, slow, step);
+      if (movement.direct) {
+        enemy.vx = movement.vx;
+        enemy.vy = movement.vy;
+      } else {
+        const steer = finiteOr(movement.steer, 6);
+        enemy.vx += (movement.vx - enemy.vx) * steer * step;
+        enemy.vy += (movement.vy - enemy.vy) * steer * step;
+      }
       const kx = enemy.knockX;
       const ky = enemy.knockY;
       enemy.knockX *= 0.85;
       enemy.knockY *= 0.85;
-      enemy.x += (enemy.vx + kx) * dt;
-      enemy.y += (enemy.vy + ky) * dt;
+      enemy.x += (enemy.vx + kx) * step;
+      enemy.y += (enemy.vy + ky) * step;
       if (enemy.bladeHitTimer <= 0) {
         for (const blade of orbitCache.blades) {
           const bx = blade.x - enemy.x;
@@ -2465,20 +3028,12 @@
           }
         }
       }
-      if (dist < enemy.r + player.r) {
-        player.hp -= enemy.damage * dt;
-        if (enemy.affix === "leech") {
-          enemy.hp = Math.min(
-            enemy.maxHp,
-            enemy.hp + enemy.damage * ELITE_LEECH_HEAL_FACTOR * dt
-          );
-        }
-      }
+      applyContactDamage(enemy, Math.hypot(player.x - enemy.x, player.y - enemy.y), step);
       if (enemy.hp <= 0) {
         entities.enemies.splice(i, 1);
         registerComboKill();
         state.kills += 1;
-        const orbValue = enemy.isBoss ? BOSS_XP_REWARD : (enemy.tier === 2 ? 12 : 8) + (enemy.isElite ? ELITE_XP_BONUS : 0);
+        const orbValue = enemy.isBoss ? BOSS_XP_REWARD : finiteOr(enemy.xpValue, enemy.tier === 2 ? 12 : 8) + (enemy.isElite ? ELITE_XP_BONUS : 0);
         addOrb(enemy.x, enemy.y, orbValue);
         if (enemy.isBoss) {
           state.bossesDefeated += 1;
@@ -3147,6 +3702,40 @@
       ctx.restore();
     }
   }
+  function drawEnemyProjectiles(cam) {
+    for (const projectile of entities.enemyProjectiles || []) {
+      const x = projectile.x - cam.x;
+      const y = projectile.y - cam.y;
+      const radius = Math.max(3, projectile.r || 5);
+      const velocityX = projectile.vx || 0;
+      const velocityY = projectile.vy || 0;
+      const angle = Math.atan2(velocityY, velocityX);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.fillStyle = "rgba(91, 70, 158, 0.42)";
+      ctx.fillRect(-radius * 3.5, -1, radius * 2.7, 2);
+      ctx.fillStyle = "#3f2631";
+      ctx.beginPath();
+      ctx.moveTo(radius + 2, 0);
+      ctx.lineTo(0, radius + 1);
+      ctx.lineTo(-radius - 2, 0);
+      ctx.lineTo(0, -radius - 1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = projectile.color || "#8067c7";
+      ctx.beginPath();
+      ctx.moveTo(radius, 0);
+      ctx.lineTo(0, radius - 1);
+      ctx.lineTo(-radius, 0);
+      ctx.lineTo(0, -radius + 1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#b7dcff";
+      ctx.fillRect(-1, -1, 3, 3);
+      ctx.restore();
+    }
+  }
   function drawRelics(cam) {
     for (const relic of entities.relics) {
       const pulse = 0.6 + 0.4 * Math.sin(relic.wobble);
@@ -3217,9 +3806,71 @@
       }
     }
   }
+  function getChargeDirection(enemy) {
+    const objectDirection = enemy.chargeDirection || enemy.chargeDir;
+    let x = objectDirection?.x ?? enemy.chargeDirX ?? enemy.chargeDx ?? enemy.chargeX ?? enemy.vx ?? 0;
+    let y = objectDirection?.y ?? enemy.chargeDirY ?? enemy.chargeDy ?? enemy.chargeY ?? enemy.vy ?? 0;
+    let length = Math.hypot(x, y);
+    if (length < 1e-3) {
+      x = player.x - enemy.x;
+      y = player.y - enemy.y;
+      length = Math.hypot(x, y);
+    }
+    if (length < 1e-3) return { x: 1, y: 0 };
+    return { x: x / length, y: y / length };
+  }
+  function drawEnemyBehaviorTelegraph(enemy, cam) {
+    if (enemy.spriteKey !== "ash_bat" && enemy.spriteKey !== "ironback_beetle") {
+      return;
+    }
+    const phase = String(enemy.behaviorPhase || "").toLowerCase();
+    const isWindup = phase.includes("windup");
+    const isCharge = phase.includes("charge") || phase.includes("swoop");
+    if (!isWindup && !isCharge) return;
+    const direction = getChargeDirection(enemy);
+    const perpendicular = { x: -direction.y, y: direction.x };
+    const x = enemy.x - cam.x;
+    const y = enemy.y - cam.y;
+    const isBeetle = enemy.spriteKey === "ironback_beetle";
+    const distance2 = isBeetle ? 104 : 82;
+    const start = enemy.r + 5;
+    const endX = x + direction.x * distance2;
+    const endY = y + direction.y * distance2;
+    const color = isBeetle ? isWindup ? "rgba(232, 165, 108, 0.9)" : "rgba(255, 112, 109, 0.82)" : isWindup ? "rgba(128, 103, 199, 0.9)" : "rgba(183, 220, 255, 0.82)";
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = isWindup ? 2 : 4;
+    ctx.setLineDash(isWindup ? [6, 5] : []);
+    ctx.beginPath();
+    ctx.moveTo(x + direction.x * start, y + direction.y * start);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const arrowSize = isBeetle ? 9 : 7;
+    ctx.beginPath();
+    ctx.moveTo(endX, endY);
+    ctx.lineTo(
+      endX - direction.x * arrowSize + perpendicular.x * arrowSize * 0.65,
+      endY - direction.y * arrowSize + perpendicular.y * arrowSize * 0.65
+    );
+    ctx.lineTo(
+      endX - direction.x * arrowSize - perpendicular.x * arrowSize * 0.65,
+      endY - direction.y * arrowSize - perpendicular.y * arrowSize * 0.65
+    );
+    ctx.closePath();
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, enemy.r + (isWindup ? 6 : 3), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
   function drawEnemies(cam) {
     for (const enemy of entities.enemies) {
-      const sprite = enemy.tier === 2 ? enemyBigSprite : enemySmallSprite;
+      const fallbackSprite = enemy.tier === 2 ? enemyBigSprite : enemySmallSprite;
+      const sprite = enemySpriteMap[enemy.spriteKey] || fallbackSprite;
+      drawEnemyBehaviorTelegraph(enemy, cam);
       if (enemy.isBoss) {
         const pulse = 0.45 + 0.35 * Math.sin(enemy.bossPulse || 0);
         ctx.strokeStyle = `rgba(255, 220, 120, ${pulse})`;
@@ -3560,6 +4211,7 @@
         const count = Math.min(availableSlots, waveConfig.event.count);
         spawnEnemyPack(count, {
           tier2Chance: waveConfig.tier2Chance,
+          enemyMix: waveConfig.event.enemyMix || waveConfig.enemyMix,
           hpMultiplier: waveConfig.event.hpMultiplier || waveConfig.hpMultiplier || 1,
           speedMultiplier: waveConfig.event.speedMultiplier || waveConfig.speedMultiplier || 1,
           eventSpawn: true
@@ -3579,6 +4231,7 @@
       for (let i = 0; i < Math.min(spawnCount, availableSlots); i += 1) {
         spawnEnemy({
           tier2Chance: waveConfig.tier2Chance,
+          enemyMix: waveConfig.enemyMix,
           hpMultiplier: waveConfig.hpMultiplier || 1,
           speedMultiplier: waveConfig.speedMultiplier || 1
         });
@@ -3627,6 +4280,7 @@
     if (state.elapsed < STAGE_DURATION) return false;
     state.elapsed = STAGE_DURATION;
     entities.enemies.length = 0;
+    entities.enemyProjectiles.length = 0;
     showRunSummary("victory");
     return true;
   }
@@ -3663,6 +4317,7 @@
     updateWeaponFiring(dt);
     updateEnemySpawner(dt);
     updateEnemies(dt);
+    updateEnemyProjectiles(dt);
     updateBullets(dt);
     updateMines(dt);
     updateTrails(dt);
@@ -3690,6 +4345,7 @@
     drawSolarOrbits(cam);
     drawMines(cam);
     drawBullets(cam);
+    drawEnemyProjectiles(cam);
     drawParticles(cam);
     drawStageItems(cam);
     drawRelics(cam);
